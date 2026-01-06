@@ -2,6 +2,25 @@
 
 The Telegram Server Manager Bot is a tool that allows you to remotely manage your Raspberry Pi, PC, or server using Telegram. With this bot, you can run commands from anywhere using your smartphone or computer, without needing to log in to your server directly. This can be especially useful if you want to check on your server's status, restart a service, or troubleshoot an issue while you're away from your desk.
 
+## Hugging Face Spaces Deployment
+
+This repository is now compatible with Hugging Face Spaces! You can deploy this bot to Hugging Face Spaces for 24/7 availability.
+
+### Features for Hugging Face Spaces:
+- ✅ Runs on Python 3.9.5
+- ✅ Web interface on port 7860
+- ✅ Automatic session cleanup
+- ✅ FastAPI health monitoring
+- ✅ Support for eval command to run Python code
+
+### Deploy to Hugging Face Spaces:
+1. Fork this repository
+2. Create a new Space on Hugging Face
+3. Select "Docker" as the SDK
+4. Connect your GitHub repository
+5. Add your Telegram bot token and admin chat ID as Space secrets
+6. Deploy!
+
 ## Prerequisites
 
 To use the Telegram Server Manager Bot, you will need the following:
@@ -36,6 +55,8 @@ It also supports the following commands:
   /top: Runs the top command and returns the results.
 
   /htop: Runs the htop command and returns the results.
+
+  /eval: Execute Python code and return the result (NEW!)
 
   /help - Shows help and usage information.
 ```
