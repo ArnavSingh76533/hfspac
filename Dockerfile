@@ -39,13 +39,13 @@ COPY . .
 # pysocks helps with connection routing.
 RUN pip3 install --no-cache-dir pysocks cryptg
 
-RUN pip3 install --no-cache-dir -r reqs.txt
+RUN if [ -f reqs.txt ]; then pip3 install --no-cache-dir -r reqs.txt; fi
 RUN pip3 install -U pip
 RUN pip3 install -U redis
 
-RUN pip3 install --no-cache-dir -r addons.txt
+RUN if [ -f addons.txt ]; then pip3 install --no-cache-dir -r addons.txt; fi
 RUN pip3 install --no-cache-dir -r requirements.txt
-RUN pip3 install --no-cache-dir -r res*/st*/op* || true
+RUN if [ -f resources/startup/optional-requirements.txt ]; then pip3 install --no-cache-dir -r resources/startup/optional-requirements.txt; fi || true
 
 # --- FIX 2: Resolve Crash (Server.py) ---
 # Downgrade FastAPI to be compatible with Pydantic v1 (which your bot likely uses)
@@ -66,7 +66,8 @@ RUN wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz 
     wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5 && \
     md5sum -c ffmpeg-git-amd64-static.tar.xz.md5 && \
     tar xvf ffmpeg-git-amd64-static.tar.xz && \
-    mv ffmpeg-git*/ffmpeg ffmpeg-git*/ffprobe /usr/local/bin/
+    mv ffmpeg-git*/ffmpeg ffmpeg-git*/ffprobe /usr/local/bin/ && \
+    rm -rf ffmpeg-git* *.tar.xz *.md5
 
 # Expose port
 EXPOSE 7860
