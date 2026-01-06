@@ -24,7 +24,8 @@ RUN sed -i 's/main/main contrib non-free/' /etc/apt/sources.list && \
         unzip \
         libssl-dev \
         libffi-dev \
-        python3-dev && \
+        python3-dev \
+        nano && \
     apt-get autoremove --purge -y && \
     rm -rf /var/lib/apt/lists/*
 

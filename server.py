@@ -35,6 +35,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global state for persistent shell session
+shell_state = {
+    "cwd": os.getcwd(),  # Current working directory
+    "env": dict(os.environ)  # Environment variables
+}
+
 # Load config for authentication
 def load_config():
     """Load configuration file"""
@@ -338,7 +344,10 @@ async def root():
                     <div class="card">
                         <h2>💻 Command Executor</h2>
                         <div class="info-box">
-                            <strong>💡 Tip:</strong> Run any shell command directly from the browser
+                            <strong>💡 Tip:</strong> Run any shell command directly from the browser. Commands like <code>cd</code> persist across executions.
+                        </div>
+                        <div class="info-box" style="background: #f0f0f0; border-left-color: #666;">
+                            <strong>📂 Current Directory:</strong> <span id="current-dir">Loading...</span>
                         </div>
                         
                         <div class="form-group">
@@ -350,8 +359,13 @@ async def root():
                             Execute Command
                         </button>
                         
-                        <div class="output empty" id="cmd-output">
-                            Output will appear here...
+                        <div style="position: relative;">
+                            <button onclick="copyOutput('cmd-output', this)" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
+                                📋 Copy
+                            </button>
+                            <div class="output empty" id="cmd-output">
+                                Output will appear here...
+                            </div>
                         </div>
                     </div>
                     
@@ -359,7 +373,7 @@ async def root():
                     <div class="card">
                         <h2>🐍 Python Evaluator</h2>
                         <div class="info-box">
-                            <strong>💡 Tip:</strong> Execute Python code with full system access
+                            <strong>💡 Tip:</strong> Execute Python code with full system access. Supports async/await!
                         </div>
                         
                         <div class="form-group">
@@ -371,8 +385,13 @@ async def root():
                             Execute Python
                         </button>
                         
-                        <div class="output empty" id="py-output">
-                            Output will appear here...
+                        <div style="position: relative;">
+                            <button onclick="copyOutput('py-output', this)" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
+                                📋 Copy
+                            </button>
+                            <div class="output empty" id="py-output">
+                                Output will appear here...
+                            </div>
                         </div>
                     </div>
                     
@@ -392,8 +411,13 @@ async def root():
                             Upload & Execute
                         </button>
                         
-                        <div class="output empty" id="file-output">
-                            Output will appear here...
+                        <div style="position: relative;">
+                            <button onclick="copyOutput('file-output', this)" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
+                                📋 Copy
+                            </button>
+                            <div class="output empty" id="file-output">
+                                Output will appear here...
+                            </div>
                         </div>
                     </div>
                     
@@ -437,8 +461,13 @@ async def root():
                             </button>
                         </div>
                         
-                        <div class="output empty" id="sys-output">
-                            Click a button to see system info...
+                        <div style="position: relative;">
+                            <button onclick="copyOutput('sys-output', this)" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
+                                📋 Copy
+                            </button>
+                            <div class="output empty" id="sys-output">
+                                Click a button to see system info...
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -459,6 +488,39 @@ async def root():
             </div>
             
             <script>
+                // Load current directory on page load
+                window.addEventListener('DOMContentLoaded', async () => {{
+                    await updateCurrentDirectory();
+                }});
+                
+                async function updateCurrentDirectory() {{
+                    try {{
+                        const response = await fetch('/api/pwd');
+                        const data = await response.json();
+                        if (data.success) {{
+                            document.getElementById('current-dir').textContent = data.cwd;
+                        }}
+                    }} catch (error) {{
+                        document.getElementById('current-dir').textContent = 'Unknown';
+                    }}
+                }}
+                
+                function copyOutput(elementId, btnElement) {{
+                    const output = document.getElementById(elementId);
+                    const text = output.textContent;
+                    
+                    navigator.clipboard.writeText(text).then(() => {{
+                        // Show feedback
+                        const originalText = btnElement.innerHTML;
+                        btnElement.innerHTML = '✅ Copied!';
+                        setTimeout(() => {{
+                            btnElement.innerHTML = originalText;
+                        }}, 2000);
+                    }}).catch(err => {{
+                        alert('Failed to copy: ' + err);
+                    }});
+                }}
+                
                 function showTab(tabName) {{
                     // Hide all tab contents
                     document.querySelectorAll('.tab-content').forEach(content => {{
@@ -503,6 +565,8 @@ async def root():
                         
                         if (data.success) {{
                             output.textContent = '✅ Command executed successfully:\\n\\n' + data.output;
+                            // Update current directory if command was successful
+                            await updateCurrentDirectory();
                         }} else {{
                             output.textContent = '❌ Error:\\n\\n' + data.error;
                         }}
@@ -638,7 +702,7 @@ async def root():
 
 @app.post("/api/execute")
 async def execute_command(request: Request):
-    """Execute a shell command"""
+    """Execute a shell command with persistent working directory"""
     try:
         data = await request.json()
         command = data.get("command", "").strip()
@@ -655,12 +719,45 @@ async def execute_command(request: Request):
         
         # Execute command with timeout
         try:
+            # Check if command is 'cd' to update persistent state
+            if command.startswith("cd ") or command == "cd":
+                parts = command.split(maxsplit=1)
+                if len(parts) == 1:
+                    # cd without arguments goes to home
+                    new_dir = os.path.expanduser("~")
+                else:
+                    new_dir = parts[1]
+                    # Handle relative paths
+                    if not os.path.isabs(new_dir):
+                        new_dir = os.path.join(shell_state["cwd"], new_dir)
+                    # Expand ~ and resolve path (realpath resolves symlinks and normalizes)
+                    new_dir = os.path.expanduser(new_dir)
+                    new_dir = os.path.realpath(new_dir)
+                
+                # Check if directory exists and is accessible
+                # Note: This is an admin tool with full system access by design
+                if os.path.isdir(new_dir) and os.access(new_dir, os.R_OK):
+                    shell_state["cwd"] = new_dir
+                    return JSONResponse({
+                        "success": True,
+                        "output": f"Changed directory to: {new_dir}",
+                        "return_code": 0
+                    })
+                else:
+                    return JSONResponse({
+                        "success": False,
+                        "error": f"Directory not found or not accessible: {new_dir}"
+                    })
+            
+            # Execute command in the persistent working directory
             result = subprocess.run(
                 command,
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                cwd=shell_state["cwd"],
+                env=shell_state["env"]
             )
             
             output = result.stdout if result.stdout else result.stderr
@@ -693,7 +790,13 @@ async def execute_command(request: Request):
 
 @app.post("/api/eval")
 async def evaluate_python(request: Request):
-    """Execute Python code"""
+    """Execute Python code with support for async/await
+    
+    SECURITY NOTE: This endpoint intentionally allows arbitrary Python code execution.
+    It is restricted to admin users only via verify_admin() check.
+    This is designed for remote server management in trusted environments.
+    Only authorized administrators should have access.
+    """
     try:
         data = await request.json()
         code = data.get("code", "").strip()
@@ -709,29 +812,62 @@ async def evaluate_python(request: Request):
         logger.info(f"Executing Python code (length: {len(code)})")
         
         try:
+            # Import necessary modules for async support
+            import sys
+            import asyncio
+            from io import StringIO
+            
             # Create a namespace for execution
             namespace = {
                 '__builtins__': __builtins__,
                 'os': os,
                 'subprocess': subprocess,
+                'asyncio': asyncio,
             }
             
             # Capture stdout
-            import sys
-            from io import StringIO
-            
             old_stdout = sys.stdout
             sys.stdout = StringIO()
             
             try:
-                # Try to evaluate as expression first
+                # Check if code contains await (indicating async code)
+                # Use AST parsing for more accurate detection
                 try:
-                    result = eval(code, namespace)
+                    import ast
+                    # Try to parse the code to detect async usage
+                    tree = ast.parse(code)
+                    has_await = any(isinstance(node, (ast.Await, ast.AsyncWith, ast.AsyncFor)) 
+                                   for node in ast.walk(tree))
+                    has_async_def = any(isinstance(node, ast.AsyncFunctionDef) 
+                                       for node in ast.walk(tree))
+                    is_async = has_await or has_async_def
+                except SyntaxError:
+                    # If parsing fails, fall back to simple string check
+                    is_async = 'await ' in code or code.strip().startswith('async ')
+                
+                if is_async:
+                    # Wrap code in async function and await it
+                    import textwrap
+                    indented_code = textwrap.indent(code, '    ')
+                    async_code = f"""
+async def __async_exec():
+{indented_code}
+"""
+                    # Compile and execute the async function definition
+                    exec(async_code, namespace)
+                    # Now await the async function
+                    result = await namespace['__async_exec']()
                     if result is not None:
                         print(result)
-                except SyntaxError:
-                    # If it fails, execute as statement
-                    exec(code, namespace)
+                else:
+                    # Try to evaluate as expression first
+                    try:
+                        result = eval(code, namespace)
+                        if result is not None:
+                            print(result)
+                    except SyntaxError:
+                        # If it fails, execute as statement
+                        exec(code, namespace)
                 
                 output = sys.stdout.getvalue()
                 if not output:
@@ -824,6 +960,14 @@ async def run_python_file(file: UploadFile = File(...), admin_id: str = Form(...
 async def health():
     """Health check endpoint"""
     return {"status": "healthy", "bot": "running"}
+
+@app.get("/api/pwd")
+async def get_pwd():
+    """Get current working directory"""
+    return {
+        "success": True,
+        "cwd": shell_state["cwd"]
+    }
 
 @app.get("/api/status")
 async def status():
