@@ -790,7 +790,13 @@ async def execute_command(request: Request):
 
 @app.post("/api/eval")
 async def evaluate_python(request: Request):
-    """Execute Python code with support for async/await"""
+    """Execute Python code with support for async/await
+    
+    SECURITY NOTE: This endpoint intentionally allows arbitrary Python code execution.
+    It is restricted to admin users only via verify_admin() check.
+    This is designed for remote server management in trusted environments.
+    Only authorized administrators should have access.
+    """
     try:
         data = await request.json()
         code = data.get("code", "").strip()
