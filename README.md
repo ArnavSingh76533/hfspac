@@ -86,7 +86,7 @@ The web interface provides:
 
 ## Optional: Telegram Bot
 
-The repository includes a legacy Telegram bot (`bot.py`) that can be enabled if needed. To use it:
+The repository includes an optional Telegram bot (`bot.py`) that can be enabled if needed. To use it:
 1. Create a `config` file with your Telegram bot token and admin chat ID
 2. Modify `start.sh` to include bot startup
 3. The bot provides remote command execution via Telegram
