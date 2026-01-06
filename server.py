@@ -730,12 +730,13 @@ async def execute_command(request: Request):
                     # Handle relative paths
                     if not os.path.isabs(new_dir):
                         new_dir = os.path.join(shell_state["cwd"], new_dir)
-                    # Expand ~ and resolve path
+                    # Expand ~ and resolve path (realpath resolves symlinks and normalizes)
                     new_dir = os.path.expanduser(new_dir)
-                    new_dir = os.path.abspath(new_dir)
+                    new_dir = os.path.realpath(new_dir)
                 
-                # Check if directory exists
-                if os.path.isdir(new_dir):
+                # Check if directory exists and is accessible
+                # Note: This is an admin tool with full system access by design
+                if os.path.isdir(new_dir) and os.access(new_dir, os.R_OK):
                     shell_state["cwd"] = new_dir
                     return JSONResponse({
                         "success": True,
@@ -745,7 +746,7 @@ async def execute_command(request: Request):
                 else:
                     return JSONResponse({
                         "success": False,
-                        "error": f"Directory not found: {new_dir}"
+                        "error": f"Directory not found or not accessible: {new_dir}"
                     })
             
             # Execute command in the persistent working directory
@@ -824,11 +825,27 @@ async def evaluate_python(request: Request):
             
             try:
                 # Check if code contains await (indicating async code)
-                if 'await ' in code or code.strip().startswith('async '):
+                # Use AST parsing for more accurate detection
+                try:
+                    import ast
+                    # Try to parse the code to detect async usage
+                    tree = ast.parse(code)
+                    has_await = any(isinstance(node, (ast.Await, ast.AsyncWith, ast.AsyncFor)) 
+                                   for node in ast.walk(tree))
+                    has_async_def = any(isinstance(node, ast.AsyncFunctionDef) 
+                                       for node in ast.walk(tree))
+                    is_async = has_await or has_async_def
+                except SyntaxError:
+                    # If parsing fails, fall back to simple string check
+                    is_async = 'await ' in code or code.strip().startswith('async ')
+                
+                if is_async:
                     # Wrap code in async function and await it
+                    import textwrap
+                    indented_code = textwrap.indent(code, '    ')
                     async_code = f"""
 async def __async_exec():
-{chr(10).join('    ' + line for line in code.split(chr(10)))}
+{indented_code}
 """
                     # Compile and execute the async function definition
                     exec(async_code, namespace)
