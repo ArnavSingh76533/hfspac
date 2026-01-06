@@ -1,0 +1,14 @@
+# Core telegram requirements
+python-telegram-bot==10.0.1
+configparser==4.0.2
+certifi==2024.7.4
+future==0.18.3
+
+# Web server requirements
+fastapi<0.100.0
+pydantic<2.0.0
+uvicorn
+
+# Additional utilities
+redis
+aiohttp

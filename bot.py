@@ -46,7 +46,7 @@ def ping8(bot, update):
         return
     cmdOut = str(
         subprocess.check_output(
-            "ping", "8.8.8.8 -c4", stderr=subprocess.STDOUT, shell=True
+            "ping 8.8.8.8 -c4", stderr=subprocess.STDOUT, shell=True
         ),
         "utf-8",
     )
@@ -71,11 +71,53 @@ def helpCMD(bot, update):
     )
 
 
+def evalCMD(bot, update):
+    """Execute Python code and return the result
+    
+    SECURITY NOTE: This command allows arbitrary Python code execution.
+    It is restricted to admin users only via isAdmin() check.
+    This is intentional for remote server management but should be used
+    with caution. Only authorized administrators should have access.
+    """
+    if not isAdmin(bot, update):
+        return
+    
+    # Get the Python code from the message (remove /eval command)
+    code = update.message.text.replace("/eval", "", 1).strip()
+    
+    if not code:
+        bot.sendMessage(
+            text="Please provide Python code to evaluate.\nUsage: /eval <python_code>",
+            chat_id=adminCID,
+        )
+        return
+    
+    try:
+        # Create a safe namespace for eval
+        namespace = {
+            '__builtins__': __builtins__,
+            'os': os,
+            'subprocess': subprocess,
+        }
+        
+        # Try to evaluate as expression first
+        try:
+            result = eval(code, namespace)
+            output = str(result)
+        except SyntaxError:
+            # If it fails, try to execute as statement
+            exec(code, namespace)
+            output = "Code executed successfully (no return value)"
+        
+        bot.sendMessage(text=f"✅ Result:\n{output}", chat_id=adminCID)
+    except Exception as e:
+        bot.sendMessage(text=f"❌ Error:\n{type(e).__name__}: {str(e)}", chat_id=adminCID)
+
+
 def topCMD(bot, update):
     if not isAdmin(bot, update):
         return
     cmdOut = str(subprocess.check_output("top -n 1", shell=True), "utf-8")
-    bot.sendMessage(text=cmdOut, chat_id=adminCID)
     bot.sendMessage(text=cmdOut, chat_id=adminCID)
 
 
@@ -134,6 +176,7 @@ def main():
     dp.add_handler(CommandHandler("top", topCMD))
     dp.add_handler(CommandHandler("htop", HTopCMD))
     dp.add_handler(CommandHandler("help", helpCMD))
+    dp.add_handler(CommandHandler("eval", evalCMD))
     dp.add_handler(MessageHandler(Filters.text, runCMD))
 
     dp.add_error_handler(error)

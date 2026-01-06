@@ -1,0 +1,5 @@
+# Additional add-ons and utilities
+requests
+beautifulsoup4
+lxml
+pillow

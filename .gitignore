@@ -125,3 +125,10 @@ dmypy.json
 .pyre/
 
 config
+
+# Telegram session files
+*.session
+*.session-journal
+
+# Hugging Face Spaces
+.space
