@@ -46,7 +46,7 @@ def ping8(bot, update):
         return
     cmdOut = str(
         subprocess.check_output(
-            "ping", "8.8.8.8 -c4", stderr=subprocess.STDOUT, shell=True
+            "ping 8.8.8.8 -c4", stderr=subprocess.STDOUT, shell=True
         ),
         "utf-8",
     )
@@ -118,7 +118,6 @@ def topCMD(bot, update):
     if not isAdmin(bot, update):
         return
     cmdOut = str(subprocess.check_output("top -n 1", shell=True), "utf-8")
-    bot.sendMessage(text=cmdOut, chat_id=adminCID)
     bot.sendMessage(text=cmdOut, chat_id=adminCID)
 
 
