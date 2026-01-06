@@ -1,3 +1,12 @@
+---
+title: Telegram Remote Command Runner
+emoji: 🤖
+colorFrom: blue
+colorTo: gray
+sdk: docker
+pinned: false
+---
+
 # Telegram Server Manager Bot
 
 The Telegram Server Manager Bot is a tool that allows you to remotely manage your Raspberry Pi, PC, or server using Telegram. With this bot, you can run commands from anywhere using your smartphone or computer, without needing to log in to your server directly. This can be especially useful if you want to check on your server's status, restart a service, or troubleshoot an issue while you're away from your desk.
