@@ -360,7 +360,7 @@ async def root():
                         </button>
                         
                         <div style="position: relative;">
-                            <button onclick="copyOutput('cmd-output')" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
+                            <button onclick="copyOutput('cmd-output', this)" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
                                 📋 Copy
                             </button>
                             <div class="output empty" id="cmd-output">
@@ -386,7 +386,7 @@ async def root():
                         </button>
                         
                         <div style="position: relative;">
-                            <button onclick="copyOutput('py-output')" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
+                            <button onclick="copyOutput('py-output', this)" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
                                 📋 Copy
                             </button>
                             <div class="output empty" id="py-output">
@@ -412,7 +412,7 @@ async def root():
                         </button>
                         
                         <div style="position: relative;">
-                            <button onclick="copyOutput('file-output')" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
+                            <button onclick="copyOutput('file-output', this)" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
                                 📋 Copy
                             </button>
                             <div class="output empty" id="file-output">
@@ -462,7 +462,7 @@ async def root():
                         </div>
                         
                         <div style="position: relative;">
-                            <button onclick="copyOutput('sys-output')" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
+                            <button onclick="copyOutput('sys-output', this)" style="position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em;">
                                 📋 Copy
                             </button>
                             <div class="output empty" id="sys-output">
@@ -505,17 +505,16 @@ async def root():
                     }}
                 }}
                 
-                function copyOutput(elementId) {{
+                function copyOutput(elementId, btnElement) {{
                     const output = document.getElementById(elementId);
                     const text = output.textContent;
                     
                     navigator.clipboard.writeText(text).then(() => {{
                         // Show feedback
-                        const btn = event.target;
-                        const originalText = btn.innerHTML;
-                        btn.innerHTML = '✅ Copied!';
+                        const originalText = btnElement.innerHTML;
+                        btnElement.innerHTML = '✅ Copied!';
                         setTimeout(() => {{
-                            btn.innerHTML = originalText;
+                            btnElement.innerHTML = originalText;
                         }}, 2000);
                     }}).catch(err => {{
                         alert('Failed to copy: ' + err);
@@ -825,21 +824,18 @@ async def evaluate_python(request: Request):
             
             try:
                 # Check if code contains await (indicating async code)
-                if 'await ' in code or 'async ' in code:
-                    # Wrap code in async function and run it
+                if 'await ' in code or code.strip().startswith('async '):
+                    # Wrap code in async function and await it
                     async_code = f"""
-import asyncio
 async def __async_exec():
 {chr(10).join('    ' + line for line in code.split(chr(10)))}
-
-__result = asyncio.run(__async_exec())
 """
+                    # Compile and execute the async function definition
                     exec(async_code, namespace)
-                    output = sys.stdout.getvalue()
-                    result = namespace.get('__result')
+                    # Now await the async function
+                    result = await namespace['__async_exec']()
                     if result is not None:
                         print(result)
-                        output = sys.stdout.getvalue()
                 else:
                     # Try to evaluate as expression first
                     try:
