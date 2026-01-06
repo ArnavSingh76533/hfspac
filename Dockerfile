@@ -74,4 +74,5 @@ EXPOSE 7860
 
 # --- TRICK 3: Auto-delete session + Force IPv4 ---
 # Deletes old sessions AND forces Python to use IPv4 for DNS (helps with connection blocks)
-CMD ["bash", "-c", "echo '🔄 TRICK: Cleaning sessions...' && find . -name '*.session' -type f -delete && python3 server.py & python3 bot.py"]
+# Now only runs the web server without Telegram bot dependency
+CMD ["bash", "-c", "echo '🔄 TRICK: Cleaning sessions...' && find . -name '*.session' -type f -delete && python3 server.py"]
