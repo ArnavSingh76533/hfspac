@@ -9,22 +9,38 @@ Created on Wed Apr  4 19:06:08 2018
 import subprocess
 import configparser
 import os
+import sys
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
 
 
-config = configparser.ConfigParser()
-config.read("config")
-### Get admin chat_id from config file
-### For more security replies only send to admin chat_id
-adminCID = config["SecretConfig"]["admincid"]
-
-### Enable logging
+# Configure logging - reduce noise from telegram library
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
+# Suppress verbose logging from telegram and urllib3
+logging.getLogger('telegram.vendor.ptb_urllib3.urllib3.connectionpool').setLevel(logging.ERROR)
+logging.getLogger('telegram.ext.updater').setLevel(logging.ERROR)
+
 logger = logging.getLogger(__name__)
+
+# Try to read config file
+config = configparser.ConfigParser()
+try:
+    if not os.path.exists("config"):
+        logger.error("Config file not found. Please create a 'config' file based on config.example")
+        logger.info("Bot cannot start without configuration. Exiting gracefully...")
+        sys.exit(0)  # Exit gracefully so the web server can continue
+    
+    config.read("config")
+    ### Get admin chat_id from config file
+    ### For more security replies only send to admin chat_id
+    adminCID = config["SecretConfig"]["admincid"]
+except (KeyError, configparser.Error) as e:
+    logger.error(f"Error reading config file: {e}")
+    logger.info("Bot cannot start without valid configuration. Exiting gracefully...")
+    sys.exit(0)  # Exit gracefully so the web server can continue
 ### This function run command and send output to user
 def runCMD(bot, update):
     if not isAdmin(bot, update):
@@ -168,20 +184,31 @@ def isAdmin(bot, update):
 
 
 def main():
-    updater = Updater(config["SecretConfig"]["Token"])
-    dp = updater.dispatcher
+    try:
+        logger.info("Starting Telegram bot...")
+        updater = Updater(config["SecretConfig"]["Token"])
+        dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler("start", startCMD))
-    dp.add_handler(CommandHandler("ping8", ping8))
-    dp.add_handler(CommandHandler("top", topCMD))
-    dp.add_handler(CommandHandler("htop", HTopCMD))
-    dp.add_handler(CommandHandler("help", helpCMD))
-    dp.add_handler(CommandHandler("eval", evalCMD))
-    dp.add_handler(MessageHandler(Filters.text, runCMD))
+        dp.add_handler(CommandHandler("start", startCMD))
+        dp.add_handler(CommandHandler("ping8", ping8))
+        dp.add_handler(CommandHandler("top", topCMD))
+        dp.add_handler(CommandHandler("htop", HTopCMD))
+        dp.add_handler(CommandHandler("help", helpCMD))
+        dp.add_handler(CommandHandler("eval", evalCMD))
+        dp.add_handler(MessageHandler(Filters.text, runCMD))
 
-    dp.add_error_handler(error)
-    updater.start_polling()
-    updater.idle()
+        dp.add_error_handler(error)
+        
+        logger.info("Bot configured successfully. Starting polling...")
+        updater.start_polling()
+        logger.info("✅ Telegram bot is now running and listening for commands!")
+        updater.idle()
+    except Exception as e:
+        logger.error(f"Failed to start Telegram bot: {type(e).__name__}: {str(e)}")
+        logger.info("This is normal if running in an environment without Telegram API access (e.g., Hugging Face Spaces)")
+        logger.info("The web server will continue to run. Configure the bot with valid credentials to enable Telegram functionality.")
+        # Exit gracefully - let the web server continue running
+        sys.exit(0)
 
 
 if __name__ == "__main__":
