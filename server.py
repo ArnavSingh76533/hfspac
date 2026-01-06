@@ -51,6 +51,8 @@ def verify_admin(chat_id: str):
         admin_cid = config["SecretConfig"].get("admincid", "")
         return str(chat_id) == str(admin_cid)
     # If no config, allow access for demo purposes in restricted environments
+    # WARNING: This is insecure in production. Always use a config file with proper admin_id
+    logger.warning("No config file found - running in insecure demo mode")
     return True
 
 @app.get("/", response_class=HTMLResponse)
@@ -443,13 +445,16 @@ async def root():
                 
                 <div class="warning-box" style="margin-top: 20px;">
                     <h4>🔒 Security Notice:</h4>
-                    <p>This web interface provides full system access. In production environments:</p>
+                    <p><strong>⚠️ IMPORTANT:</strong> This web interface provides full system access and is designed for trusted environments only.</p>
+                    <p>In production environments:</p>
                     <ul style="margin-left: 20px; margin-top: 10px;">
                         <li>Use strong authentication (configure admin chat ID in config file)</li>
                         <li>Deploy behind a reverse proxy with HTTPS</li>
                         <li>Implement rate limiting and input validation</li>
                         <li>Monitor and log all command executions</li>
+                        <li>Restrict network access to trusted IPs only</li>
                     </ul>
+                    <p style="margin-top: 10px;"><strong>Note:</strong> This tool intentionally allows shell command execution and Python eval - features equivalent to the Telegram bot. Use responsibly.</p>
                 </div>
             </div>
             
@@ -779,7 +784,7 @@ async def run_python_file(file: UploadFile = File(...), admin_id: str = Form(...
         try:
             # Execute the file
             result = subprocess.run(
-                ['/usr/bin/python3', tmp_path],
+                ['python3', tmp_path],  # Use python3 from PATH instead of hardcoded path
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -805,8 +810,8 @@ async def run_python_file(file: UploadFile = File(...), admin_id: str = Form(...
             # Clean up temp file
             try:
                 os.unlink(tmp_path)
-            except:
-                pass
+            except (FileNotFoundError, PermissionError) as e:
+                logger.warning(f"Could not delete temp file {tmp_path}: {e}")
                 
     except Exception as e:
         logger.error(f"Error in run_python_file: {e}")
