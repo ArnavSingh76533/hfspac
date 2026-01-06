@@ -1,76 +1,95 @@
 ---
-title: Telegram Remote Command Runner
-emoji: 🤖
+title: Remote Command Runner Web Console
+emoji: 🌐
 colorFrom: blue
 colorTo: gray
 sdk: docker
 pinned: false
 ---
 
-# Telegram Server Manager Bot
+# Remote Command Runner - Web Console
 
-The Telegram Server Manager Bot is a tool that allows you to remotely manage your Raspberry Pi, PC, or server using Telegram. With this bot, you can run commands from anywhere using your smartphone or computer, without needing to log in to your server directly. This can be especially useful if you want to check on your server's status, restart a service, or troubleshoot an issue while you're away from your desk.
+A powerful web-based interface for remote server management. Execute commands, run Python code, and manage your server through a modern, professional web interface.
 
 ## Hugging Face Spaces Deployment
 
-This repository is now compatible with Hugging Face Spaces! You can deploy this bot to Hugging Face Spaces for 24/7 availability.
+This application is designed for Hugging Face Spaces and provides instant 24/7 web access!
 
-### Features for Hugging Face Spaces:
-- ✅ Runs on Python 3.9.5
-- ✅ Web interface on port 7860
+### Features:
+- ✅ Modern web interface on port 7860
+- ✅ Execute shell commands remotely
+- ✅ Run Python code with full system access
+- ✅ Upload and execute Python files
+- ✅ System information dashboard
+- ✅ No configuration required - works out of the box!
+- ✅ FastAPI-powered REST API
 - ✅ Automatic session cleanup
-- ✅ FastAPI health monitoring
-- ✅ Support for eval command to run Python code
 
 ### Deploy to Hugging Face Spaces:
 1. Fork this repository
 2. Create a new Space on Hugging Face
 3. Select "Docker" as the SDK
 4. Connect your GitHub repository
-5. Add your Telegram bot token and admin chat ID as Space secrets
-6. Deploy!
+5. Deploy and access your web console!
+
+## Features
+
+### Web Console
+- **Command Executor**: Run any shell command directly from the browser
+- **Python Evaluator**: Execute Python code with full system access
+- **File Executor**: Upload and run Python files
+- **System Dashboard**: View system information, disk usage, memory, and network status
+- **Professional UI**: Modern, responsive interface with real-time output
+
+### Security
+The web interface provides full system access. In production:
+- Deploy behind a reverse proxy with HTTPS
+- Implement proper authentication
+- Use firewall rules to restrict access
+- Monitor and log all command executions
 
 ## Prerequisites
 
-To use the Telegram Server Manager Bot, you will need the following:
-
-* A Telegram account.
-* A Telegram bot token. You can generate this by talking to @BotFather on Telegram.
-* Python 3.x installed on your RaspberryPi, PC, or server.
-
+* Python 3.x installed on your system
+* FastAPI and Uvicorn for the web server
 
 ## Installation
 
-1. Clone this repository to your RaspberryPi, PC, or server.
+1. Clone this repository to your server.
 
 2. Install the required dependencies by running `pip install -r requirements.txt` in the terminal.
 
-3. Rename config.example to config and replace YOUR_TOKEN with your Telegram bot token, YOUR_CHAT_ID with your Telegram chat ID, and ADMIN_CID with the chat ID of the admin who is authorized to execute commands.
+3. (Optional) For authentication, create a `config` file based on `config.example` with your admin chat ID.
 
-4. Make the bot.py file executable by running chmod +x bot.py in the terminal.
+4. Run the server by running `./start.sh` or `python3 server.py` in the terminal.
 
-5. Run the bot by running ./bot.py in the terminal.
-
+5. Access the web interface at `http://localhost:7860`
 
 ## Usage
 
-To use the Telegram Server Manager Bot, simply open Telegram and start a chat with your bot. Only the admin can execute commands, so make sure to add the admin chat ID to the configuration file. You can then run any of the built-in commands or enter any Linux command that you want to run on your RaspberryPi, PC, or server.
+Simply open your web browser and navigate to the server's address (typically `http://localhost:7860` for local, or your Hugging Face Space URL).
 
-It also supports the following commands:
+The web interface provides:
+- **Command Executor**: Run shell commands
+- **Python Evaluator**: Execute Python code snippets
+- **File Uploader**: Upload and run Python scripts
+- **System Info**: Quick access to system metrics
 
-```bash
-  /ping8: Pings 8.8.8.8 and returns the results.
+## API Endpoints
 
-  /top: Runs the top command and returns the results.
+- `GET /` - Web interface
+- `POST /api/execute` - Execute shell commands
+- `POST /api/eval` - Execute Python code
+- `POST /api/run-file` - Upload and run Python files
+- `GET /health` - Health check
+- `GET /api/status` - Service status
 
-  /htop: Runs the htop command and returns the results.
+## Optional: Telegram Bot
 
-  /eval: Execute Python code and return the result (NEW!)
-
-  /help - Shows help and usage information.
-```
-
-** You can also run any Linux command by simply entering it in the Telegram chat with the bot.
+The repository includes a legacy Telegram bot (`bot.py`) that can be enabled if needed. To use it:
+1. Create a `config` file with your Telegram bot token and admin chat ID
+2. Modify `start.sh` to include bot startup
+3. The bot provides remote command execution via Telegram
 
 ## Contributions
 
