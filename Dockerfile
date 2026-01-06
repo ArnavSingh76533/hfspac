@@ -39,7 +39,6 @@ COPY . .
 # pysocks helps with connection routing.
 RUN pip3 install --no-cache-dir pysocks cryptg
 
-# Install requirements
 RUN if [ -f reqs.txt ]; then pip3 install --no-cache-dir -r reqs.txt; fi
 RUN pip3 install -U pip
 RUN pip3 install -U redis
@@ -54,15 +53,25 @@ RUN if [ -f resources/startup/optional-requirements.txt ]; then pip3 install --n
 RUN pip3 install "fastapi<0.100.0" "pydantic<2.0.0" uvicorn
 
 # Set appropriate permissions
-RUN chown -R 1000:0 /Ult && \
-    chmod 777 . && \
-    chmod 777 /usr && \
-    chown -R 1000:0 /usr && \
-    chmod -R 755 /Ult
+RUN chown -R 1000:0 /Ult \
+    && chown -R 1000:0 . \
+    && chmod 777 . \
+    && chmod 777 /usr \
+    && chown -R 1000:0 /usr \
+    && chmod -R 755 /Ult \
+    && chmod +x /Ult/start.sh
 
-# Expose port for Hugging Face Spaces
+# Install FFmpeg
+RUN wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz && \
+    wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5 && \
+    md5sum -c ffmpeg-git-amd64-static.tar.xz.md5 && \
+    tar xvf ffmpeg-git-amd64-static.tar.xz && \
+    mv ffmpeg-git*/ffmpeg ffmpeg-git*/ffprobe /usr/local/bin/ && \
+    rm -rf ffmpeg-git* *.tar.xz *.md5
+
+# Expose port
 EXPOSE 7860
 
 # --- TRICK 3: Auto-delete session + Force IPv4 ---
 # Deletes old sessions AND forces Python to use IPv4 for DNS (helps with connection blocks)
-CMD ["bash", "-c", "echo '🔄 Cleaning sessions...' && find . -name '*.session' -type f -delete && python3 server.py & python3 bot.py"]
+CMD ["bash", "-c", "echo '🔄 TRICK: Cleaning sessions...' && find . -name '*.session' -type f -delete && python3 server.py & python3 bot.py"]
