@@ -60,14 +60,6 @@ RUN chown -R 1000:0 /Ult && \
     chown -R 1000:0 /usr && \
     chmod -R 755 /Ult
 
-# Install FFmpeg
-RUN wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz && \
-    wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5 && \
-    md5sum -c ffmpeg-git-amd64-static.tar.xz.md5 && \
-    tar xvf ffmpeg-git-amd64-static.tar.xz && \
-    mv ffmpeg-git*/ffmpeg ffmpeg-git*/ffprobe /usr/local/bin/ && \
-    rm -rf ffmpeg-git*
-
 # Expose port for Hugging Face Spaces
 EXPOSE 7860
 

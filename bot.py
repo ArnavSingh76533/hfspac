@@ -72,7 +72,13 @@ def helpCMD(bot, update):
 
 
 def evalCMD(bot, update):
-    """Execute Python code and return the result"""
+    """Execute Python code and return the result
+    
+    SECURITY NOTE: This command allows arbitrary Python code execution.
+    It is restricted to admin users only via isAdmin() check.
+    This is intentional for remote server management but should be used
+    with caution. Only authorized administrators should have access.
+    """
     if not isAdmin(bot, update):
         return
     
