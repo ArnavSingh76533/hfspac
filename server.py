@@ -1123,8 +1123,10 @@ async def ai_chat(request: Request):
             # Create OpenAI client
             client = openai.OpenAI(api_key=api_key)
             
-            # List of models to try in order of preference (includes new models with fallbacks)
-            models_to_try = [model, "gpt-4o", "gpt-4", "gpt-3.5-turbo", "gpt-4o-mini"]
+            # List of models to try in order of preference
+            # User's selected model first, then fallbacks (with duplicates removed)
+            fallback_models = ["gpt-4o", "gpt-4", "gpt-3.5-turbo", "gpt-4o-mini"]
+            models_to_try = [model] + [m for m in fallback_models if m != model]
             
             last_error = None
             for model_name in models_to_try:

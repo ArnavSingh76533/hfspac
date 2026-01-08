@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HFS Code Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +25,7 @@
         }
         html { font-size: 14px; -webkit-font-smoothing: antialiased; height: 100%; }
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; height: 100%; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-        body.drawer-open { overflow: hidden; position: fixed; width: 100%; }
+        body.drawer-open, body.ai-panel-open { overflow: hidden; position: fixed; width: 100%; }
         .app-container { display: flex; min-height: 100%; }
         
         /* Sidebar */
@@ -207,7 +207,7 @@
         @media (max-width: 768px) {
             :root { --sidebar-width: 280px; }
             .sidebar { transform: translateX(-100%); }
-            .sidebar[role="dialog"] { max-height: 100dvh; overflow-y: auto; }
+            .sidebar.open { max-height: 100dvh; overflow-y: auto; }
             .sidebar.open { transform: translateX(0); }
             .sidebar-close { display: flex; }
             .drawer-overlay { display: block; opacity: 0; pointer-events: none; }
@@ -240,7 +240,7 @@
         <div class="drawer-overlay" id="drawerOverlay"></div>
         
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar" role="dialog" aria-modal="true" aria-label="Navigation menu">
+        <aside class="sidebar" id="sidebar" aria-label="Navigation menu">
             <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">×</button>
             <div class="sidebar-header">
                 <div class="logo-icon">⚡</div>
@@ -1390,14 +1390,14 @@
         function openAiPanel() {
             aiPanelOverlay.classList.add('active');
             aiPanel.classList.add('open');
-            document.body.classList.add('drawer-open');
+            document.body.classList.add('ai-panel-open');
             analyzeError();
         }
 
         function closeAiPanel() {
             aiPanelOverlay.classList.remove('active');
             aiPanel.classList.remove('open');
-            document.body.classList.remove('drawer-open');
+            document.body.classList.remove('ai-panel-open');
         }
 
         document.getElementById('aiPanelClose').addEventListener('click', closeAiPanel);
