@@ -48,8 +48,8 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         
         /* Drawer Overlay */
-        .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 199; opacity: 0; transition: opacity var(--transition-normal); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
-        .drawer-overlay.active { opacity: 1; }
+        .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 199; opacity: 0; pointer-events: none; transition: opacity var(--transition-normal); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+        .drawer-overlay.active { display: block; opacity: 1; pointer-events: auto; }
         /* Main Content */
         .main { flex: 1; margin-left: var(--sidebar-width); display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
         .topbar { height: var(--topbar-height); background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 var(--space-4); gap: var(--space-3); position: sticky; top: 0; z-index: 100; }
@@ -210,7 +210,8 @@
             .sidebar[role="dialog"] { max-height: 100dvh; overflow-y: auto; }
             .sidebar.open { transform: translateX(0); }
             .sidebar-close { display: flex; }
-            .drawer-overlay { display: block; }
+            .drawer-overlay { display: block; opacity: 0; pointer-events: none; }
+            .drawer-overlay.active { opacity: 1; pointer-events: auto; }
             .main { margin-left: 0; }
             .menu-btn { display: flex; }
             .content { padding: var(--space-3); }
