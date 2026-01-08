@@ -20,6 +20,14 @@ import json
 import sys
 from io import StringIO
 
+# Configure logging first
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
+    level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
+
 # Try to import optional dependencies
 try:
     import openai
@@ -34,14 +42,6 @@ try:
 except ImportError:
     REQUESTS_AVAILABLE = False
     logger.warning("Requests library not available. API testing features will be disabled.")
-
-# Configure logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
-    level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
