@@ -20,6 +20,21 @@ import json
 import sys
 from io import StringIO
 
+# Try to import optional dependencies
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logger.warning("OpenAI library not available. AI chat features will be disabled.")
+
+try:
+    import requests as req_lib
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    logger.warning("Requests library not available. API testing features will be disabled.")
+
 # Configure logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
@@ -1072,12 +1087,25 @@ async def run_javascript(request: Request):
 
 @app.post("/api/ai-chat")
 async def ai_chat(request: Request):
-    """Chat with OpenAI GPT for code assistance"""
+    """Chat with OpenAI GPT for code assistance
+    
+    SECURITY NOTE: API keys are sent from client to server for OpenAI requests.
+    In production, consider storing API keys server-side in environment variables
+    or a secure key management system.
+    """
     try:
+        # Check if OpenAI is available
+        if not OPENAI_AVAILABLE:
+            return JSONResponse({
+                "success": False,
+                "error": "OpenAI library is not installed. Please install it with: pip install openai"
+            })
+        
         data = await request.json()
         prompt = data.get("prompt", "").strip()
         api_key = data.get("api_key", "").strip()
         admin_id = data.get("admin_id", "")
+        model = data.get("model", "gpt-4")  # Allow model selection, default to gpt-4
         
         if not prompt:
             return JSONResponse({"success": False, "error": "No prompt provided"})
@@ -1089,36 +1117,55 @@ async def ai_chat(request: Request):
         if not verify_admin(admin_id):
             return JSONResponse({"success": False, "error": "Unauthorized"})
         
-        logger.info(f"AI Chat request (prompt length: {len(prompt)})")
+        logger.info(f"AI Chat request (prompt length: {len(prompt)}, model: {model})")
         
         try:
-            import openai
-            
             # Create OpenAI client
             client = openai.OpenAI(api_key=api_key)
             
-            # Make API call
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a professional coding assistant. Help users write, debug, and improve code. Provide clear, concise, and accurate responses. When providing code, use markdown code blocks with the appropriate language."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=2000,
-                temperature=0.7
-            )
+            # List of models to try in order of preference
+            models_to_try = [model, "gpt-3.5-turbo", "gpt-4o-mini"]
             
-            ai_response = response.choices[0].message.content
+            last_error = None
+            for model_name in models_to_try:
+                try:
+                    # Make API call
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": "You are a professional coding assistant. Help users write, debug, and improve code. Provide clear, concise, and accurate responses. When providing code, use markdown code blocks with the appropriate language."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=2000,
+                        temperature=0.7
+                    )
+                    
+                    ai_response = response.choices[0].message.content
+                    
+                    return JSONResponse({
+                        "success": True,
+                        "response": ai_response,
+                        "model_used": model_name
+                    })
+                except Exception as model_error:
+                    last_error = model_error
+                    # If model not found, try next one
+                    if "model" in str(model_error).lower() and "not found" in str(model_error).lower():
+                        logger.warning(f"Model {model_name} not available, trying next...")
+                        continue
+                    else:
+                        # For other errors, don't try other models
+                        raise
             
-            return JSONResponse({
-                "success": True,
-                "response": ai_response
-            })
+            # If we get here, all models failed
+            raise last_error if last_error else Exception("No models available")
             
         except Exception as e:
             error_msg = str(e)
-            if "api_key" in error_msg.lower():
+            if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
                 error_msg = "Invalid API key. Please check your OpenAI API key."
+            elif "rate" in error_msg.lower() or "quota" in error_msg.lower():
+                error_msg = "Rate limit or quota exceeded. Please try again later or check your OpenAI account."
             return JSONResponse({
                 "success": False,
                 "error": f"OpenAI API error: {error_msg}"
@@ -1187,6 +1234,13 @@ async def save_file(request: Request):
 async def test_api(request: Request):
     """Test API endpoints with custom requests"""
     try:
+        # Check if requests library is available
+        if not REQUESTS_AVAILABLE:
+            return JSONResponse({
+                "success": False,
+                "error": "Requests library is not installed. Please install it with: pip install requests"
+            })
+        
         data = await request.json()
         method = data.get("method", "GET").upper()
         url = data.get("url", "").strip()
@@ -1204,8 +1258,6 @@ async def test_api(request: Request):
         logger.info(f"API Test: {method} {url}")
         
         try:
-            import requests as req_lib
-            
             # Parse headers
             headers = {}
             if headers_text.strip():
