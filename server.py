@@ -1105,7 +1105,7 @@ async def ai_chat(request: Request):
         prompt = data.get("prompt", "").strip()
         api_key = data.get("api_key", "").strip()
         admin_id = data.get("admin_id", "")
-        model = data.get("model", "gpt-3.5-turbo")  # Default to gpt-3.5-turbo (more widely available)
+        model = data.get("model", "gpt-4o")  # Default to gpt-4o (widely available and capable)
         
         if not prompt:
             return JSONResponse({"success": False, "error": "No prompt provided"})
@@ -1123,8 +1123,8 @@ async def ai_chat(request: Request):
             # Create OpenAI client
             client = openai.OpenAI(api_key=api_key)
             
-            # List of models to try in order of preference
-            models_to_try = [model, "gpt-3.5-turbo", "gpt-4", "gpt-4o-mini"]
+            # List of models to try in order of preference (includes new models with fallbacks)
+            models_to_try = [model, "gpt-4o", "gpt-4", "gpt-3.5-turbo", "gpt-4o-mini"]
             
             last_error = None
             for model_name in models_to_try:
