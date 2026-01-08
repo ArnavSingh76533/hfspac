@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HFS Professional Code Platform - AI Agent & Editor</title>
+    
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --dark-bg: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Glass morphism background overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3), transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 192, 203, 0.3), transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 280px;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        
+        .sidebar-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-header p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .sidebar-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            background: transparent;
+            border: 1px solid transparent;
+        }
+        
+        .sidebar-item:hover {
+            background: var(--glass-bg);
+            border-color: var(--glass-border);
+            color: var(--text-primary);
+        }
+        
+        .sidebar-item.active {
+            background: var(--glass-bg);
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+        }
+        
+        .sidebar-item svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        /* Main Content */
+        .main-container {
+            margin-left: 280px;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-container.full-width {
+            margin-left: 0;
+        }
+        
+        /* Top Bar */
+        .top-bar {
+            padding: 20px 30px;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+        
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .menu-toggle {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .menu-toggle:hover {
+            background: var(--glass-border);
+        }
+        
+        .top-bar-title h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Glass Cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .glass-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--glass-border);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Code Editor */
+        .editor-container {
+            height: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        /* Output Display */
+        .output-display {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin-top: 16px;
+            color: #d4d4d4;
+        }
+        
+        .output-display.success {
+            border-color: var(--success);
+        }
+        
+        .output-display.error {
+            border-color: var(--error);
+        }
+        
+        .output-display .json-key {
+            color: #9cdcfe;
+        }
+        
+        .output-display .json-string {
+            color: #ce9178;
+        }
+        
+        .output-display .json-number {
+            color: #b5cea8;
+        }
+        
+        /* AI Chat */
+        .ai-chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .chat-message {
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        
+        .chat-message.user {
+            background: var(--primary-color);
+            margin-left: auto;
+        }
+        
+        .chat-message.ai {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .chat-input {
+            flex: 1;
+        }
+        
+        /* Language Selector */
+        .language-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .lang-btn {
+            padding: 8px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .lang-btn:hover, .lang-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-container {
+                margin-left: 0;
+            }
+        }
+        
+        /* Info Alert */
+        .info-alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border-left: 4px solid;
+        }
+        
+        .info-alert.info {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+            color: #93c5fd;
+        }
+        
+        .info-alert.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: var(--warning);
+            color: #fbbf24;
+        }
+        
+        .info-alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--success);
+            color: #6ee7b7;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h1>🚀 HFS Platform</h1>
+            <p>Professional Code & AI Agent</p>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="sidebar-item active" onclick="showSection('code-editor', event)">
+                <span>💻</span>
+                <span>Code Editor</span>
+            </div>
+            <div class="sidebar-item" onclick="showSection('bash-executor', event)">
+                <span>🔧</span>
+                <span>Bash Executor</span>
+            </div>
+            <div class="sidebar-item" onclick="showSection('python-eval', event)">
+                <span>🐍</span>
+                <span>Python Eval</span>
+            </div>
+            <div class="sidebar-item" onclick="showSection('javascript-runner', event)">
+                <span>⚡</span>
+                <span>JavaScript Runner</span>
+            </div>
+            <div class="sidebar-item" onclick="showSection('ai-agent', event)">
+                <span>🤖</span>
+                <span>AI Agent (GPT)</span>
+            </div>
+            <div class="sidebar-item" onclick="showSection('file-manager', event)">
+                <span>📁</span>
+                <span>File Manager</span>
+            </div>
+            <div class="sidebar-item" onclick="showSection('api-tester', event)">
+                <span>🌐</span>
+                <span>API Tester</span>
+            </div>
+        </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-container" id="mainContainer">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="top-bar-title">
+                    <h2 id="section-title">Code Editor</h2>
+                </div>
+            </div>
+            <div class="status-badge">✅ System Online</div>
+        </div>
+        
+        <!-- Code Editor Section -->
+        <section class="content-section active" id="code-editor">
+            <div class="glass-card">
+                <h3>💻 Professional Code Editor</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Write, preview, save, and deploy code with Monaco Editor (VS Code)
+                </p>
+                
+                <div class="language-selector">
+                    <button class="lang-btn active" onclick="changeEditorLanguage('python', event)">Python</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('javascript', event)">JavaScript</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('html', event)">HTML</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('css', event)">CSS</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('json', event)">JSON</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('bash', event)">Bash</button>
+                </div>
+                
+                <div class="editor-container" id="editor"></div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="runCode()">
+                        <span>▶️</span>
+                        <span>Run Code</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="saveCode()">
+                        <span>💾</span>
+                        <span>Save</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="deployCode()">
+                        <span>🚀</span>
+                        <span>Deploy</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearEditor()">
+                        <span>🗑️</span>
+                        <span>Clear</span>
+                    </button>
+                </div>
+                
+                <div class="output-display" id="editor-output">
+                    Output will appear here...
+                </div>
+            </div>
+        </section>
+        
+        <!-- Bash Executor Section -->
+        <section class="content-section" id="bash-executor">
+            <div class="glass-card">
+                <h3>🔧 Bash Command Executor</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Execute bash commands with persistent working directory
+                </p>
+                
+                <div class="info-alert info">
+                    <strong>Current Directory:</strong> <span id="bash-pwd">Loading...</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Command</label>
+                    <input type="text" id="bash-command" placeholder="ls -la" />
+                </div>
+                
+                <button class="btn btn-primary" onclick="runBashCommand()">
+                    <span>▶️</span>
+                    <span>Execute</span>
+                </button>
+                
+                <div class="output-display" id="bash-output">
+                    Output will appear here...
+                </div>
+            </div>
+        </section>
+        
+        <!-- Python Eval Section -->
+        <section class="content-section" id="python-eval">
+            <div class="glass-card">
+                <h3>🐍 Python Evaluator</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Execute Python code with automatic JSON formatting
+                </p>
+                
+                <div class="form-group">
+                    <label class="form-label">Python Code</label>
+                    <textarea id="python-code" placeholder="import requests&#10;import json&#10;&#10;response = requests.get('https://api.github.com')&#10;print(json.dumps(response.json(), indent=2))"></textarea>
+                </div>
+                
+                <button class="btn btn-primary" onclick="runPythonCode()">
+                    <span>▶️</span>
+                    <span>Execute Python</span>
+                </button>
+                
+                <div class="output-display" id="python-output">
+                    Output will appear here...
+                </div>
+            </div>
+        </section>
+        
+        <!-- JavaScript Runner Section -->
+        <section class="content-section" id="javascript-runner">
+            <div class="glass-card">
+                <h3>⚡ JavaScript Runner (Node.js)</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Execute JavaScript code with Node.js runtime
+                </p>
+                
+                <div class="form-group">
+                    <label class="form-label">JavaScript Code</label>
+                    <textarea id="js-code" placeholder="console.log('Hello from Node.js!');&#10;const data = { name: 'HFS', version: '1.0' };&#10;console.log(JSON.stringify(data, null, 2));"></textarea>
+                </div>
+                
+                <button class="btn btn-primary" onclick="runJavaScriptCode()">
+                    <span>▶️</span>
+                    <span>Execute JavaScript</span>
+                </button>
+                
+                <div class="output-display" id="js-output">
+                    Output will appear here...
+                </div>
+            </div>
+        </section>
+        
+        <!-- AI Agent Section -->
+        <section class="content-section" id="ai-agent">
+            <div class="glass-card">
+                <h3>🤖 AI Code Agent (OpenAI GPT)</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Chat with AI to generate, review, and improve code
+                </p>
+                
+                <div class="info-alert warning" id="api-key-warning">
+                    <strong>⚠️ API Key Required:</strong> Configure your OpenAI API key below.<br>
+                    <small>🔒 Security Note: API keys are sent to the server for OpenAI requests. For production use, consider implementing server-side key storage.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">OpenAI API Key</label>
+                    <input type="password" id="openai-api-key" placeholder="sk-..." />
+                </div>
+                
+                <div class="ai-chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-message ai">
+                            Hello! I'm your AI coding assistant. I can help you write, debug, and improve code. What would you like to create today?
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" class="chat-input" id="ai-prompt" placeholder="Ask AI to generate code..." />
+                        <button class="btn btn-primary" onclick="sendAIMessage()">
+                            <span>Send</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="action-buttons" style="margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="insertAICodeToEditor()">
+                        <span>📝</span>
+                        <span>Insert to Editor</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearAIChat()">
+                        <span>🗑️</span>
+                        <span>Clear Chat</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- File Manager Section -->
+        <section class="content-section" id="file-manager">
+            <div class="glass-card">
+                <h3>📁 File Manager</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Upload, save, and manage your code files
+                </p>
+                
+                <div class="form-group">
+                    <label class="form-label">Upload File</label>
+                    <input type="file" id="file-upload" />
+                </div>
+                
+                <button class="btn btn-primary" onclick="uploadFile()">
+                    <span>⬆️</span>
+                    <span>Upload & Execute</span>
+                </button>
+                
+                <div class="form-group" style="margin-top: 30px;">
+                    <label class="form-label">Save Current Code As</label>
+                    <input type="text" id="save-filename" placeholder="script.py" />
+                </div>
+                
+                <button class="btn btn-secondary" onclick="saveFileLocally()">
+                    <span>💾</span>
+                    <span>Save to Server</span>
+                </button>
+                
+                <div class="output-display" id="file-output">
+                    File operations will appear here...
+                </div>
+            </div>
+        </section>
+        
+        <!-- API Tester Section -->
+        <section class="content-section" id="api-tester">
+            <div class="glass-card">
+                <h3>🌐 API Tester</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Test API endpoints with formatted JSON responses
+                </p>
+                
+                <div class="form-group">
+                    <label class="form-label">HTTP Method</label>
+                    <select id="api-method">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">API URL</label>
+                    <input type="text" id="api-url" placeholder="https://api.example.com/endpoint" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Headers (JSON)</label>
+                    <textarea id="api-headers" placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Body (JSON)</label>
+                    <textarea id="api-body" placeholder='{"key": "value"}'></textarea>
+                </div>
+                
+                <button class="btn btn-primary" onclick="testAPI()">
+                    <span>🚀</span>
+                    <span>Send Request</span>
+                </button>
+                
+                <div class="output-display" id="api-output">
+                    API response will appear here...
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <script>
+        // Global variables
+        let editor = null;
+        let currentLanguage = 'python';
+        let lastAIResponse = '';
+        
+        // Initialize Monaco Editor
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+        
+        require(['vs/editor/editor.main'], function() {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '# Write your Python code here\nimport json\n\ndata = {"message": "Hello from HFS Platform!"}\nprint(json.dumps(data, indent=2))',
+                language: 'python',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                fontSize: 14,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on'
+            });
+        });
+        
+        // Sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContainer = document.getElementById('mainContainer');
+            sidebar.classList.toggle('hidden');
+            if (sidebar.classList.contains('hidden')) {
+                mainContainer.classList.add('full-width');
+            } else {
+                mainContainer.classList.remove('full-width');
+            }
+        }
+        
+        // Section navigation
+        function showSection(sectionId, event) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active from all sidebar items
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            if (event && event.target) {
+                event.target.closest('.sidebar-item').classList.add('active');
+            }
+            
+            // Update title
+            const titles = {
+                'code-editor': 'Code Editor',
+                'bash-executor': 'Bash Executor',
+                'python-eval': 'Python Evaluator',
+                'javascript-runner': 'JavaScript Runner',
+                'ai-agent': 'AI Agent (GPT)',
+                'file-manager': 'File Manager',
+                'api-tester': 'API Tester'
+            };
+            document.getElementById('section-title').textContent = titles[sectionId];
+            
+            // Load PWD for bash
+            if (sectionId === 'bash-executor') {
+                updatePWD();
+            }
+        }
+        
+        // Change editor language
+        function changeEditorLanguage(lang, event) {
+            currentLanguage = lang;
+            if (editor) {
+                monaco.editor.setModelLanguage(editor.getModel(), lang);
+            }
+            
+            // Update active button
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+            
+            // Set default code
+            const defaults = {
+                python: '# Write your Python code here\nimport json\n\ndata = {"message": "Hello from Python!"}\nprint(json.dumps(data, indent=2))',
+                javascript: '// Write your JavaScript code here\nconst data = { message: "Hello from JavaScript!" };\nconsole.log(JSON.stringify(data, null, 2));',
+                html: '<!DOCTYPE html>\n<html>\n<head>\n    <title>My Page</title>\n</head>\n<body>\n    <h1>Hello World!</h1>\n</body>\n</html>',
+                css: '/* Write your CSS code here */\nbody {\n    font-family: Arial, sans-serif;\n    background: #f0f0f0;\n}',
+                json: '{\n    "name": "HFS Platform",\n    "version": "1.0",\n    "features": ["Code Editor", "AI Agent", "Multi-language"]\n}',
+                bash: '#!/bin/bash\n# Write your bash script here\necho "Hello from Bash!"'
+            };
+            
+            if (editor && defaults[lang]) {
+                editor.setValue(defaults[lang]);
+            }
+        }
+        
+        // Run code from editor
+        async function runCode() {
+            const code = editor.getValue();
+            const output = document.getElementById('editor-output');
+            
+            output.textContent = 'Executing...';
+            output.className = 'output-display';
+            
+            try {
+                let response;
+                if (currentLanguage === 'python') {
+                    response = await fetch('/api/eval', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: code, admin_id: 'web-console' })
+                    });
+                } else if (currentLanguage === 'javascript') {
+                    response = await fetch('/api/run-javascript', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: code, admin_id: 'web-console' })
+                    });
+                } else if (currentLanguage === 'bash') {
+                    response = await fetch('/api/execute', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: code, admin_id: 'web-console' })
+                    });
+                } else {
+                    output.textContent = '❌ Language not supported for execution yet';
+                    output.classList.add('error');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    output.textContent = data.output;
+                    output.classList.add('success');
+                    
+                    // Try to format as JSON if possible
+                    try {
+                        const jsonMatch = data.output.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+                        if (jsonMatch) {
+                            const jsonObj = JSON.parse(jsonMatch[0]);
+                            output.textContent = JSON.stringify(jsonObj, null, 2);
+                        }
+                    } catch (e) {
+                        // Not JSON, keep original output
+                    }
+                } else {
+                    output.textContent = '❌ Error:\n\n' + data.error;
+                    output.classList.add('error');
+                }
+            } catch (error) {
+                output.textContent = '❌ Network error: ' + error.message;
+                output.classList.add('error');
+            }
+        }
+        
+        // Save code
+        function saveCode() {
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `code.${currentLanguage === 'javascript' ? 'js' : currentLanguage}`;
+            a.click();
+        }
+        
+        // Deploy code
+        async function deployCode() {
+            alert('Deploy functionality - save to server and make available via URL');
+        }
+        
+        // Clear editor
+        function clearEditor() {
+            if (editor) {
+                editor.setValue('');
+            }
+        }
+        
+        // Update PWD
+        async function updatePWD() {
+            try {
+                const response = await fetch('/api/pwd');
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('bash-pwd').textContent = data.cwd;
+                }
+            } catch (error) {
+                document.getElementById('bash-pwd').textContent = 'Unknown';
+            }
+        }
+        
+        // Run bash command
+        async function runBashCommand() {
+            const command = document.getElementById('bash-command').value;
+            const output = document.getElementById('bash-output');
+            
+            output.textContent = 'Executing...';
+            output.className = 'output-display';
+            
+            try {
+                const response = await fetch('/api/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: command, admin_id: 'web-console' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    output.textContent = data.output;
+                    output.classList.add('success');
+                    updatePWD();
+                } else {
+                    output.textContent = '❌ Error:\n\n' + data.error;
+                    output.classList.add('error');
+                }
+            } catch (error) {
+                output.textContent = '❌ Network error: ' + error.message;
+                output.classList.add('error');
+            }
+        }
+        
+        // Run Python code
+        async function runPythonCode() {
+            const code = document.getElementById('python-code').value;
+            const output = document.getElementById('python-output');
+            
+            output.textContent = 'Executing Python...';
+            output.className = 'output-display';
+            
+            try {
+                const response = await fetch('/api/eval', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code, admin_id: 'web-console' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Try to format JSON
+                    let displayOutput = data.output;
+                    try {
+                        const jsonMatch = data.output.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+                        if (jsonMatch) {
+                            const jsonObj = JSON.parse(jsonMatch[0]);
+                            displayOutput = JSON.stringify(jsonObj, null, 2);
+                        }
+                    } catch (e) {
+                        // Not JSON, use original
+                    }
+                    
+                    output.textContent = displayOutput;
+                    output.classList.add('success');
+                } else {
+                    output.textContent = '❌ Error:\n\n' + data.error;
+                    output.classList.add('error');
+                }
+            } catch (error) {
+                output.textContent = '❌ Network error: ' + error.message;
+                output.classList.add('error');
+            }
+        }
+        
+        // Run JavaScript code
+        async function runJavaScriptCode() {
+            const code = document.getElementById('js-code').value;
+            const output = document.getElementById('js-output');
+            
+            output.textContent = 'Executing JavaScript...';
+            output.className = 'output-display';
+            
+            try {
+                const response = await fetch('/api/run-javascript', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code, admin_id: 'web-console' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    output.textContent = data.output;
+                    output.classList.add('success');
+                } else {
+                    output.textContent = '❌ Error:\n\n' + data.error;
+                    output.classList.add('error');
+                }
+            } catch (error) {
+                output.textContent = '❌ Network error: ' + error.message;
+                output.classList.add('error');
+            }
+        }
+        
+        // Send AI message
+        async function sendAIMessage() {
+            const prompt = document.getElementById('ai-prompt').value;
+            const apiKey = document.getElementById('openai-api-key').value;
+            const messagesDiv = document.getElementById('chat-messages');
+            
+            if (!prompt.trim()) return;
+            if (!apiKey.trim()) {
+                alert('Please enter your OpenAI API key');
+                return;
+            }
+            
+            // Add user message
+            const userMsg = document.createElement('div');
+            userMsg.className = 'chat-message user';
+            userMsg.textContent = prompt;
+            messagesDiv.appendChild(userMsg);
+            
+            // Clear input
+            document.getElementById('ai-prompt').value = '';
+            
+            // Add loading message
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = 'chat-message ai';
+            loadingMsg.innerHTML = '<span class="spinner"></span> Thinking...';
+            messagesDiv.appendChild(loadingMsg);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            try {
+                const response = await fetch('/api/ai-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: prompt, 
+                        api_key: apiKey,
+                        admin_id: 'web-console'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Remove loading message
+                messagesDiv.removeChild(loadingMsg);
+                
+                // Add AI response
+                const aiMsg = document.createElement('div');
+                aiMsg.className = 'chat-message ai';
+                if (data.success) {
+                    aiMsg.textContent = data.response;
+                    lastAIResponse = data.response;
+                } else {
+                    aiMsg.textContent = '❌ Error: ' + data.error;
+                }
+                messagesDiv.appendChild(aiMsg);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                
+            } catch (error) {
+                messagesDiv.removeChild(loadingMsg);
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'chat-message ai';
+                errorMsg.textContent = '❌ Network error: ' + error.message;
+                messagesDiv.appendChild(errorMsg);
+            }
+        }
+        
+        // Insert AI code to editor
+        function insertAICodeToEditor() {
+            if (lastAIResponse && editor) {
+                // Extract code blocks from AI response
+                const codeMatch = lastAIResponse.match(/```[\w]*\n([\s\S]*?)```/);
+                if (codeMatch) {
+                    editor.setValue(codeMatch[1].trim());
+                } else {
+                    editor.setValue(lastAIResponse);
+                }
+                showSection('code-editor');
+            }
+        }
+        
+        // Clear AI chat
+        function clearAIChat() {
+            const messagesDiv = document.getElementById('chat-messages');
+            messagesDiv.innerHTML = `
+                <div class="chat-message ai">
+                    Hello! I'm your AI coding assistant. I can help you write, debug, and improve code. What would you like to create today?
+                </div>
+            `;
+            lastAIResponse = '';
+        }
+        
+        // Upload file
+        async function uploadFile() {
+            const fileInput = document.getElementById('file-upload');
+            const output = document.getElementById('file-output');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                output.textContent = '❌ Please select a file';
+                output.classList.add('error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('admin_id', 'web-console');
+            
+            output.textContent = 'Uploading and executing...';
+            output.className = 'output-display';
+            
+            try {
+                const response = await fetch('/api/run-file', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    output.textContent = '✅ File executed successfully:\n\n' + data.output;
+                    output.classList.add('success');
+                } else {
+                    output.textContent = '❌ Error:\n\n' + data.error;
+                    output.classList.add('error');
+                }
+            } catch (error) {
+                output.textContent = '❌ Network error: ' + error.message;
+                output.classList.add('error');
+            }
+        }
+        
+        // Save file locally
+        async function saveFileLocally() {
+            const filename = document.getElementById('save-filename').value;
+            const output = document.getElementById('file-output');
+            
+            if (!filename.trim()) {
+                output.textContent = '❌ Please enter a filename';
+                output.classList.add('error');
+                return;
+            }
+            
+            const code = editor.getValue();
+            
+            output.textContent = 'Saving file...';
+            output.className = 'output-display';
+            
+            try {
+                const response = await fetch('/api/save-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        filename: filename,
+                        content: code,
+                        admin_id: 'web-console'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    output.textContent = '✅ File saved successfully: ' + data.path;
+                    output.classList.add('success');
+                } else {
+                    output.textContent = '❌ Error:\n\n' + data.error;
+                    output.classList.add('error');
+                }
+            } catch (error) {
+                output.textContent = '❌ Network error: ' + error.message;
+                output.classList.add('error');
+            }
+        }
+        
+        // Test API
+        async function testAPI() {
+            const method = document.getElementById('api-method').value;
+            const url = document.getElementById('api-url').value;
+            const headersText = document.getElementById('api-headers').value;
+            const bodyText = document.getElementById('api-body').value;
+            const output = document.getElementById('api-output');
+            
+            if (!url.trim()) {
+                output.textContent = '❌ Please enter an API URL';
+                output.classList.add('error');
+                return;
+            }
+            
+            output.textContent = 'Sending request...';
+            output.className = 'output-display';
+            
+            try {
+                const response = await fetch('/api/test-api', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        method: method,
+                        url: url,
+                        headers: headersText,
+                        body: bodyText,
+                        admin_id: 'web-console'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Format JSON response
+                    try {
+                        const jsonObj = JSON.parse(data.response);
+                        output.textContent = JSON.stringify(jsonObj, null, 2);
+                    } catch (e) {
+                        output.textContent = data.response;
+                    }
+                    output.classList.add('success');
+                } else {
+                    output.textContent = '❌ Error:\n\n' + data.error;
+                    output.classList.add('error');
+                }
+            } catch (error) {
+                output.textContent = '❌ Network error: ' + error.message;
+                output.classList.add('error');
+            }
+        }
+        
+        // Initialize PWD on load
+        window.addEventListener('DOMContentLoaded', () => {
+            updatePWD();
+        });
+        
+        // Enable Enter key for bash and AI
+        document.getElementById('bash-command')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') runBashCommand();
+        });
+        
+        document.getElementById('ai-prompt')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendAIMessage();
+        });
+    </script>
+</body>
+</html>

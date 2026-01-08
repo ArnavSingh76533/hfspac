@@ -8,6 +8,7 @@ This keeps the space alive and provides a basic web interface
 from fastapi import FastAPI, Request, HTTPException, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
 import logging
@@ -15,14 +16,32 @@ import subprocess
 import configparser
 import tempfile
 import traceback
+import json
+import sys
+from io import StringIO
 
-# Configure logging
+# Configure logging first
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
     level=logging.INFO
 )
 
 logger = logging.getLogger(__name__)
+
+# Try to import optional dependencies
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logger.warning("OpenAI library not available. AI chat features will be disabled.")
+
+try:
+    import requests as req_lib
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    logger.warning("Requests library not available. API testing features will be disabled.")
 
 app = FastAPI()
 
@@ -65,10 +84,14 @@ def verify_admin(chat_id: str):
 async def root():
     """Root endpoint that returns a professional web interface"""
     
-    # Check if config file exists
-    config_exists = os.path.exists("config")
-    
-    return f"""
+    # Read and return the new UI template
+    template_path = os.path.join(os.path.dirname(__file__), "ui_template.html")
+    try:
+        with open(template_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        # Fallback to basic interface if template not found
+        return f"""
     <!DOCTYPE html>
     <html lang="en">
         <head>
@@ -823,6 +846,7 @@ async def evaluate_python(request: Request):
                 'os': os,
                 'subprocess': subprocess,
                 'asyncio': asyncio,
+                'json': json,  # Add json module for better formatting
             }
             
             # Capture stdout
@@ -864,7 +888,11 @@ async def __async_exec():
                     try:
                         result = eval(code, namespace)
                         if result is not None:
-                            print(result)
+                            # If result is dict or list, auto-format as JSON
+                            if isinstance(result, (dict, list)):
+                                print(json.dumps(result, indent=2, ensure_ascii=False))
+                            else:
+                                print(result)
                     except SyntaxError:
                         # If it fails, execute as statement
                         exec(code, namespace)
@@ -872,6 +900,18 @@ async def __async_exec():
                 output = sys.stdout.getvalue()
                 if not output:
                     output = "Code executed successfully (no output)"
+                
+                # Try to detect and format JSON output
+                try:
+                    # Check if output looks like JSON (starts with { or [)
+                    stripped = output.strip()
+                    if (stripped.startswith('{') or stripped.startswith('[')) and (stripped.endswith('}') or stripped.endswith(']')):
+                        # Try to parse and reformat as JSON
+                        json_obj = json.loads(stripped)
+                        output = json.dumps(json_obj, indent=2, ensure_ascii=False)
+                except (json.JSONDecodeError, ValueError):
+                    # Not valid JSON, keep original output
+                    pass
                 
                 return JSONResponse({
                     "success": True,
@@ -978,6 +1018,312 @@ async def status():
         "port": 7860,
         "web_console": "enabled"
     }
+
+@app.post("/api/run-javascript")
+async def run_javascript(request: Request):
+    """Execute JavaScript code using Node.js"""
+    try:
+        data = await request.json()
+        code = data.get("code", "").strip()
+        admin_id = data.get("admin_id", "")
+        
+        if not code:
+            return JSONResponse({"success": False, "error": "No code provided"})
+        
+        # Verify admin
+        if not verify_admin(admin_id):
+            return JSONResponse({"success": False, "error": "Unauthorized"})
+        
+        logger.info(f"Executing JavaScript code (length: {len(code)})")
+        
+        # Save code to temp file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as tmp:
+            tmp.write(code)
+            tmp_path = tmp.name
+        
+        try:
+            # Execute with Node.js
+            result = subprocess.run(
+                ['node', tmp_path],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=shell_state["cwd"],
+                env=shell_state["env"]
+            )
+            
+            output = result.stdout if result.stdout else result.stderr
+            if not output:
+                output = "Code executed successfully (no output)"
+            
+            return JSONResponse({
+                "success": True,
+                "output": output,
+                "return_code": result.returncode
+            })
+            
+        except subprocess.TimeoutExpired:
+            return JSONResponse({
+                "success": False,
+                "error": "Execution timed out after 30 seconds"
+            })
+        except FileNotFoundError:
+            return JSONResponse({
+                "success": False,
+                "error": "Node.js not found. Please install Node.js to execute JavaScript code."
+            })
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except (FileNotFoundError, PermissionError) as e:
+                logger.warning(f"Could not delete temp file {tmp_path}: {e}")
+                
+    except Exception as e:
+        logger.error(f"Error in run_javascript: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": f"Server error: {str(e)}"
+        })
+
+@app.post("/api/ai-chat")
+async def ai_chat(request: Request):
+    """Chat with OpenAI GPT for code assistance
+    
+    SECURITY NOTE: API keys are sent from client to server for OpenAI requests.
+    In production, consider storing API keys server-side in environment variables
+    or a secure key management system.
+    """
+    try:
+        # Check if OpenAI is available
+        if not OPENAI_AVAILABLE:
+            return JSONResponse({
+                "success": False,
+                "error": "OpenAI library is not installed. Please install it with: pip install openai"
+            })
+        
+        data = await request.json()
+        prompt = data.get("prompt", "").strip()
+        api_key = data.get("api_key", "").strip()
+        admin_id = data.get("admin_id", "")
+        model = data.get("model", "gpt-3.5-turbo")  # Default to gpt-3.5-turbo (more widely available)
+        
+        if not prompt:
+            return JSONResponse({"success": False, "error": "No prompt provided"})
+        
+        if not api_key:
+            return JSONResponse({"success": False, "error": "No API key provided"})
+        
+        # Verify admin
+        if not verify_admin(admin_id):
+            return JSONResponse({"success": False, "error": "Unauthorized"})
+        
+        logger.info(f"AI Chat request (prompt length: {len(prompt)}, model: {model})")
+        
+        try:
+            # Create OpenAI client
+            client = openai.OpenAI(api_key=api_key)
+            
+            # List of models to try in order of preference
+            models_to_try = [model, "gpt-3.5-turbo", "gpt-4", "gpt-4o-mini"]
+            
+            last_error = None
+            for model_name in models_to_try:
+                try:
+                    # Make API call
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": "You are a professional coding assistant. Help users write, debug, and improve code. Provide clear, concise, and accurate responses. When providing code, use markdown code blocks with the appropriate language."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=2000,
+                        temperature=0.7
+                    )
+                    
+                    ai_response = response.choices[0].message.content
+                    
+                    return JSONResponse({
+                        "success": True,
+                        "response": ai_response,
+                        "model_used": model_name
+                    })
+                except Exception as model_error:
+                    last_error = model_error
+                    # If model not found, try next one
+                    if "model" in str(model_error).lower() and "not found" in str(model_error).lower():
+                        logger.warning(f"Model {model_name} not available, trying next...")
+                        continue
+                    else:
+                        # For other errors, don't try other models
+                        raise
+            
+            # If we get here, all models failed
+            raise last_error if last_error else Exception("No models available")
+            
+        except Exception as e:
+            error_msg = str(e)
+            if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+                error_msg = "Invalid API key. Please check your OpenAI API key."
+            elif "rate" in error_msg.lower() or "quota" in error_msg.lower():
+                error_msg = "Rate limit or quota exceeded. Please try again later or check your OpenAI account."
+            return JSONResponse({
+                "success": False,
+                "error": f"OpenAI API error: {error_msg}"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in ai_chat: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": f"Server error: {str(e)}"
+        })
+
+@app.post("/api/save-file")
+async def save_file(request: Request):
+    """Save code to a file on the server"""
+    try:
+        data = await request.json()
+        filename = data.get("filename", "").strip()
+        content = data.get("content", "")
+        admin_id = data.get("admin_id", "")
+        
+        if not filename:
+            return JSONResponse({"success": False, "error": "No filename provided"})
+        
+        # Verify admin
+        if not verify_admin(admin_id):
+            return JSONResponse({"success": False, "error": "Unauthorized"})
+        
+        logger.info(f"Saving file: {filename}")
+        
+        # Security: prevent path traversal
+        filename = os.path.basename(filename)
+        
+        # Save to current working directory
+        file_path = os.path.join(shell_state["cwd"], filename)
+        
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            return JSONResponse({
+                "success": True,
+                "path": file_path,
+                "message": f"File saved successfully: {filename}"
+            })
+            
+        except PermissionError:
+            return JSONResponse({
+                "success": False,
+                "error": "Permission denied. Cannot write to this directory."
+            })
+        except Exception as e:
+            return JSONResponse({
+                "success": False,
+                "error": f"File save error: {str(e)}"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in save_file: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": f"Server error: {str(e)}"
+        })
+
+@app.post("/api/test-api")
+async def test_api(request: Request):
+    """Test API endpoints with custom requests"""
+    try:
+        # Check if requests library is available
+        if not REQUESTS_AVAILABLE:
+            return JSONResponse({
+                "success": False,
+                "error": "Requests library is not installed. Please install it with: pip install requests"
+            })
+        
+        data = await request.json()
+        method = data.get("method", "GET").upper()
+        url = data.get("url", "").strip()
+        headers_text = data.get("headers", "{}")
+        body_text = data.get("body", "{}")
+        admin_id = data.get("admin_id", "")
+        
+        if not url:
+            return JSONResponse({"success": False, "error": "No URL provided"})
+        
+        # Verify admin
+        if not verify_admin(admin_id):
+            return JSONResponse({"success": False, "error": "Unauthorized"})
+        
+        logger.info(f"API Test: {method} {url}")
+        
+        try:
+            # Parse headers
+            headers = {}
+            if headers_text.strip():
+                headers = json.loads(headers_text)
+            
+            # Parse body
+            body = None
+            if body_text.strip() and method in ['POST', 'PUT', 'PATCH']:
+                body = json.loads(body_text)
+            
+            # Make request
+            if method == 'GET':
+                response = req_lib.get(url, headers=headers, timeout=30)
+            elif method == 'POST':
+                response = req_lib.post(url, headers=headers, json=body, timeout=30)
+            elif method == 'PUT':
+                response = req_lib.put(url, headers=headers, json=body, timeout=30)
+            elif method == 'DELETE':
+                response = req_lib.delete(url, headers=headers, timeout=30)
+            else:
+                return JSONResponse({
+                    "success": False,
+                    "error": f"Unsupported HTTP method: {method}"
+                })
+            
+            # Try to format response as JSON
+            try:
+                response_json = response.json()
+                response_text = json.dumps(response_json, indent=2)
+            except:
+                response_text = response.text
+            
+            return JSONResponse({
+                "success": True,
+                "response": response_text,
+                "status_code": response.status_code,
+                "headers": dict(response.headers)
+            })
+            
+        except json.JSONDecodeError as e:
+            return JSONResponse({
+                "success": False,
+                "error": f"Invalid JSON: {str(e)}"
+            })
+        except req_lib.exceptions.Timeout:
+            return JSONResponse({
+                "success": False,
+                "error": "Request timed out after 30 seconds"
+            })
+        except req_lib.exceptions.RequestException as e:
+            return JSONResponse({
+                "success": False,
+                "error": f"Request error: {str(e)}"
+            })
+        except Exception as e:
+            return JSONResponse({
+                "success": False,
+                "error": f"API test error: {str(e)}"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in test_api: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": f"Server error: {str(e)}"
+        })
 
 if __name__ == "__main__":
     # Run on port 7860 for Hugging Face Spaces
