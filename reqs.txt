@@ -13,3 +13,7 @@ python-multipart
 # Additional utilities
 redis
 aiohttp
+
+# AI Integration
+openai>=1.0.0
+requests
