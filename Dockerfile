@@ -40,7 +40,6 @@ COPY . .
 # pysocks helps with connection routing.
 RUN pip3 install --no-cache-dir pysocks cryptg
 
-RUN if [ -f reqs.txt ]; then pip3 install --no-cache-dir -r reqs.txt; fi
 RUN pip3 install -U pip
 RUN pip3 install -U redis
 

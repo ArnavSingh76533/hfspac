@@ -3,433 +3,639 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HFS Professional Code Platform - AI Agent & Editor</title>
-    
-    <!-- Monaco Editor -->
+    <title>HFS Code Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-    
     <style>
-        * {
+        *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         :root {
-            --primary-color: #6366f1;
-            --secondary-color: #8b5cf6;
-            --dark-bg: #0f172a;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --success: #10b981;
+            /* Primary palette - single accent */
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --primary-light: rgba(59, 130, 246, 0.1);
+            
+            /* Neutral grayscale */
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f26;
+            --bg-tertiary: #242a33;
+            --bg-elevated: #2d343f;
+            
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --border: #2d343f;
+            --border-hover: #3d454f;
+            
+            /* Status colors - subtle */
+            --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.1);
             --error: #ef4444;
+            --error-bg: rgba(239, 68, 68, 0.1);
             --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            
+            /* Spacing scale (8px base) */
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            --space-10: 40px;
+            --space-12: 48px;
+            
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-normal: 200ms ease;
+            
+            /* Border radius */
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            
+            /* Sidebar width */
+            --sidebar-width: 260px;
         }
-        
+
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-            background-attachment: fixed;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
+            line-height: 1.5;
             overflow-x: hidden;
         }
-        
-        /* Glass morphism background overlay */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3), transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(255, 192, 203, 0.3), transparent 50%);
-            pointer-events: none;
-            z-index: 0;
+
+        body.sidebar-open {
+            overflow: hidden;
         }
-        
-        /* Sidebar */
+
+        /* ===== LAYOUT ===== */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ===== SIDEBAR ===== */
         .sidebar {
             position: fixed;
             left: 0;
             top: 0;
             bottom: 0;
-            width: 280px;
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(20px);
-            border-right: 1px solid var(--glass-border);
-            padding: 20px;
-            overflow-y: auto;
-            z-index: 1000;
-            transition: transform 0.3s ease;
-        }
-        
-        .sidebar.hidden {
-            transform: translateX(-100%);
-        }
-        
-        .sidebar-header {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--glass-border);
-        }
-        
-        .sidebar-header h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
-        }
-        
-        .sidebar-header p {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-        
-        .sidebar-nav {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            z-index: 100;
+            transition: transform var(--transition-normal);
         }
-        
-        .sidebar-item {
-            padding: 12px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+
+        .sidebar-header {
+            padding: var(--space-6);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-logo {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            background: transparent;
-            border: 1px solid transparent;
+            gap: var(--space-3);
         }
-        
-        .sidebar-item:hover {
-            background: var(--glass-bg);
-            border-color: var(--glass-border);
-            color: var(--text-primary);
-        }
-        
-        .sidebar-item.active {
-            background: var(--glass-bg);
-            border-color: var(--primary-color);
-            color: var(--text-primary);
-        }
-        
-        .sidebar-item svg {
-            width: 20px;
-            height: 20px;
-        }
-        
-        /* Main Content */
-        .main-container {
-            margin-left: 280px;
-            min-height: 100vh;
-            position: relative;
-            z-index: 1;
-            transition: margin-left 0.3s ease;
-        }
-        
-        .main-container.full-width {
-            margin-left: 0;
-        }
-        
-        /* Top Bar */
-        .top-bar {
-            padding: 20px 30px;
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 999;
-        }
-        
-        .top-bar-left {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        
-        .menu-toggle {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            color: var(--text-primary);
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
+
+        .sidebar-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
+            font-size: 16px;
         }
-        
-        .menu-toggle:hover {
-            background: var(--glass-border);
+
+        .sidebar-logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
         }
-        
-        .top-bar-title h2 {
-            font-size: 1.5rem;
+
+        .sidebar-nav {
+            flex: 1;
+            padding: var(--space-4);
+            overflow-y: auto;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            padding: var(--space-4) var(--space-3);
+            margin-top: var(--space-4);
         }
-        
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.875rem;
+
+        .nav-section-title:first-child {
+            margin-top: 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: 14px;
             font-weight: 500;
-            background: rgba(16, 185, 129, 0.2);
-            border: 1px solid var(--success);
+            margin-bottom: 2px;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .nav-item-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .sidebar-footer {
+            padding: var(--space-4);
+            border-top: 1px solid var(--border);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3);
+            background: var(--success-bg);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
             color: var(--success);
         }
-        
-        /* Content Sections */
-        .content-section {
-            display: none;
-            padding: 30px;
-            animation: fadeIn 0.3s ease;
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
         }
-        
-        .content-section.active {
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: margin-left var(--transition-normal);
+        }
+
+        /* ===== TOP BAR ===== */
+        .top-bar {
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--space-6);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .menu-toggle {
+            display: none;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+
+        .menu-toggle:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--border-hover);
+        }
+
+        .menu-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .page-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        /* ===== CONTENT AREA ===== */
+        .content-area {
+            flex: 1;
+            padding: var(--space-6);
+            overflow-y: auto;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn var(--transition-normal);
+        }
+
+        .section.active {
             display: block;
         }
-        
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
-        /* Glass Cards */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
         }
-        
-        .glass-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 16px;
+
+        .card-header {
+            padding: var(--space-5) var(--space-6);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 16px;
             font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--space-1);
         }
-        
-        /* Form Elements */
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
+
+        .card-description {
+            font-size: 13px;
             color: var(--text-secondary);
         }
-        
-        input, textarea, select {
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: all 0.3s ease;
+
+        .card-body {
+            padding: var(--space-6);
         }
-        
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background: rgba(255, 255, 255, 0.08);
+
+        /* ===== FORM ELEMENTS ===== */
+        .form-group {
+            margin-bottom: var(--space-5);
         }
-        
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-            font-family: 'Courier New', monospace;
-        }
-        
-        /* Buttons */
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
+
+        .form-label {
+            display: block;
+            font-size: 13px;
             font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-2);
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: var(--space-3) var(--space-4);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all var(--transition-fast);
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .form-select {
             cursor: pointer;
-            transition: all 0.3s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 40px;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            gap: var(--space-2);
+            padding: var(--space-3) var(--space-5);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: none;
+            text-decoration: none;
         }
-        
+
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: var(--primary);
             color: white;
         }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
-        
+
         .btn-secondary {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
+            background: var(--bg-tertiary);
             color: var(--text-primary);
+            border: 1px solid var(--border);
         }
-        
-        .btn-secondary:hover {
-            background: var(--glass-border);
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-elevated);
+            border-color: var(--border-hover);
         }
-        
+
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
-        
-        /* Code Editor */
-        .editor-container {
-            height: 500px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+
+        .btn-lg {
+            padding: var(--space-4) var(--space-6);
+            font-size: 15px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: var(--space-3);
+            flex-wrap: wrap;
+        }
+
+        /* ===== LANGUAGE SELECTOR ===== */
+        .lang-selector {
+            display: flex;
+            gap: var(--space-2);
+            flex-wrap: wrap;
+            margin-bottom: var(--space-5);
+        }
+
+        .lang-btn {
+            padding: var(--space-2) var(--space-4);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .lang-btn:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .lang-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* ===== EDITOR ===== */
+        .editor-wrapper {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
             overflow: hidden;
-            margin-bottom: 20px;
+            margin-bottom: var(--space-5);
         }
-        
-        /* Output Display */
-        .output-display {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 16px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.875rem;
-            max-height: 400px;
+
+        .editor-container {
+            height: 400px;
+        }
+
+        /* ===== OUTPUT ===== */
+        .output-panel {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 300px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
-            margin-top: 16px;
-            color: #d4d4d4;
+            color: var(--text-secondary);
         }
-        
-        .output-display.success {
+
+        .output-panel.success {
             border-color: var(--success);
         }
-        
-        .output-display.error {
+
+        .output-panel.error {
             border-color: var(--error);
         }
-        
-        .output-display .json-key {
-            color: #9cdcfe;
+
+        .output-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: var(--space-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        
-        .output-display .json-string {
-            color: #ce9178;
+
+        /* ===== ALERTS ===== */
+        .alert {
+            padding: var(--space-4);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-5);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-3);
+            font-size: 13px;
         }
-        
-        .output-display .json-number {
-            color: #b5cea8;
+
+        .alert-info {
+            background: var(--primary-light);
+            border: 1px solid var(--primary);
+            color: var(--primary);
         }
-        
-        /* AI Chat */
-        .ai-chat-container {
+
+        .alert-warning {
+            background: var(--warning-bg);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .alert-icon {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ===== AI CHAT ===== */
+        .chat-container {
             display: flex;
             flex-direction: column;
-            height: 600px;
+            height: 500px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
         }
-        
+
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px 8px 0 0;
+            padding: var(--space-5);
+            background: var(--bg-primary);
         }
-        
+
         .chat-message {
-            margin-bottom: 16px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            max-width: 80%;
+            margin-bottom: var(--space-4);
+            max-width: 85%;
         }
-        
+
         .chat-message.user {
-            background: var(--primary-color);
             margin-left: auto;
         }
-        
-        .chat-message.ai {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+
+        .chat-bubble {
+            padding: var(--space-4);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            line-height: 1.6;
         }
-        
+
+        .chat-message.user .chat-bubble {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.ai .chat-bubble {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
         .chat-input-area {
             display: flex;
-            gap: 10px;
-            padding: 16px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-top: none;
-            border-radius: 0 0 8px 8px;
+            gap: var(--space-3);
+            padding: var(--space-4);
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
         }
-        
-        .chat-input {
+
+        .chat-input-area .form-input {
             flex: 1;
         }
-        
-        /* Language Selector */
-        .language-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
+
+        /* ===== MODEL SELECTOR ===== */
+        .model-config {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-4);
+            margin-bottom: var(--space-5);
         }
-        
-        .lang-btn {
-            padding: 8px 16px;
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-secondary);
+
+        .model-option {
+            padding: var(--space-4);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all var(--transition-fast);
         }
-        
-        .lang-btn:hover, .lang-btn.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
+
+        .model-option:hover {
+            border-color: var(--border-hover);
         }
-        
-        /* Action Buttons */
-        .action-buttons {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
+
+        .model-option.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
         }
-        
-        /* Loading Spinner */
+
+        .model-option-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: var(--space-1);
+        }
+
+        .model-option-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* ===== LOADING ===== */
         .spinner {
-            display: inline-block;
             width: 16px;
             height: 16px;
             border: 2px solid rgba(255, 255, 255, 0.3);
@@ -437,916 +643,966 @@
             border-top-color: white;
             animation: spin 0.8s linear infinite;
         }
-        
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
-        /* Scrollbar Styling */
+
+        /* ===== MOBILE OVERLAY ===== */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-normal);
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ===== SCROLLBAR ===== */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
         }
-        
+
         ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
+            background: transparent;
         }
-        
+
         ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
+            background: var(--border);
+            border-radius: 3px;
         }
-        
+
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
+            background: var(--border-hover);
         }
-        
-        /* Grid Layout */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .editor-container {
+                height: 350px;
+            }
         }
-        
-        /* Responsive */
+
         @media (max-width: 768px) {
+            :root {
+                --sidebar-width: 280px;
+            }
+
             .sidebar {
                 transform: translateX(-100%);
             }
-            
-            .sidebar.show {
+
+            .sidebar.open {
                 transform: translateX(0);
             }
-            
-            .main-container {
+
+            .sidebar-overlay {
+                display: block;
+            }
+
+            .main-content {
                 margin-left: 0;
             }
+
+            .menu-toggle {
+                display: flex;
+            }
+
+            .content-area {
+                padding: var(--space-4);
+            }
+
+            .card-body {
+                padding: var(--space-4);
+            }
+
+            .editor-container {
+                height: 300px;
+            }
+
+            .model-config {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn-group .btn {
+                width: 100%;
+            }
+
+            .lang-selector {
+                gap: var(--space-1);
+            }
+
+            .lang-btn {
+                padding: var(--space-2) var(--space-3);
+                font-size: 12px;
+            }
+
+            .chat-container {
+                height: 400px;
+            }
         }
-        
-        /* Info Alert */
-        .info-alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            border-left: 4px solid;
-        }
-        
-        .info-alert.info {
-            background: rgba(59, 130, 246, 0.1);
-            border-color: #3b82f6;
-            color: #93c5fd;
-        }
-        
-        .info-alert.warning {
-            background: rgba(245, 158, 11, 0.1);
-            border-color: var(--warning);
-            color: #fbbf24;
-        }
-        
-        .info-alert.success {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: var(--success);
-            color: #6ee7b7;
+
+        @media (max-width: 480px) {
+            .top-bar {
+                padding: 0 var(--space-4);
+            }
+
+            .page-title {
+                font-size: 14px;
+            }
+
+            .card-header {
+                padding: var(--space-4);
+            }
+
+            .card-body {
+                padding: var(--space-4);
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h1>🚀 HFS Platform</h1>
-            <p>Professional Code & AI Agent</p>
-        </div>
-        
-        <nav class="sidebar-nav">
-            <div class="sidebar-item active" onclick="showSection('code-editor', event)">
-                <span>💻</span>
-                <span>Code Editor</span>
-            </div>
-            <div class="sidebar-item" onclick="showSection('bash-executor', event)">
-                <span>🔧</span>
-                <span>Bash Executor</span>
-            </div>
-            <div class="sidebar-item" onclick="showSection('python-eval', event)">
-                <span>🐍</span>
-                <span>Python Eval</span>
-            </div>
-            <div class="sidebar-item" onclick="showSection('javascript-runner', event)">
-                <span>⚡</span>
-                <span>JavaScript Runner</span>
-            </div>
-            <div class="sidebar-item" onclick="showSection('ai-agent', event)">
-                <span>🤖</span>
-                <span>AI Agent (GPT)</span>
-            </div>
-            <div class="sidebar-item" onclick="showSection('file-manager', event)">
-                <span>📁</span>
-                <span>File Manager</span>
-            </div>
-            <div class="sidebar-item" onclick="showSection('api-tester', event)">
-                <span>🌐</span>
-                <span>API Tester</span>
-            </div>
-        </nav>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="main-container" id="mainContainer">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="top-bar-left">
-                <button class="menu-toggle" onclick="toggleSidebar()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                    </svg>
-                </button>
-                <div class="top-bar-title">
-                    <h2 id="section-title">Code Editor</h2>
+    <div class="app-layout">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">⚡</div>
+                    <span class="sidebar-logo-text">HFS Code</span>
                 </div>
             </div>
-            <div class="status-badge">✅ System Online</div>
-        </div>
-        
-        <!-- Code Editor Section -->
-        <section class="content-section active" id="code-editor">
-            <div class="glass-card">
-                <h3>💻 Professional Code Editor</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                    Write, preview, save, and deploy code with Monaco Editor (VS Code)
-                </p>
-                
-                <div class="language-selector">
-                    <button class="lang-btn active" onclick="changeEditorLanguage('python', event)">Python</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('javascript', event)">JavaScript</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('html', event)">HTML</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('css', event)">CSS</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('json', event)">JSON</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('bash', event)">Bash</button>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Workspace</div>
+                <div class="nav-item active" data-section="editor" onclick="showSection('editor', this)">
+                    <span class="nav-item-icon">📝</span>
+                    <span>Code Editor</span>
                 </div>
-                
-                <div class="editor-container" id="editor"></div>
-                
-                <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="runCode()">
-                        <span>▶️</span>
-                        <span>Run Code</span>
+                <div class="nav-item" data-section="terminal" onclick="showSection('terminal', this)">
+                    <span class="nav-item-icon">💻</span>
+                    <span>Terminal</span>
+                </div>
+
+                <div class="nav-section-title">Languages</div>
+                <div class="nav-item" data-section="python" onclick="showSection('python', this)">
+                    <span class="nav-item-icon">🐍</span>
+                    <span>Python</span>
+                </div>
+                <div class="nav-item" data-section="javascript" onclick="showSection('javascript', this)">
+                    <span class="nav-item-icon">📜</span>
+                    <span>JavaScript</span>
+                </div>
+
+                <div class="nav-section-title">AI Tools</div>
+                <div class="nav-item" data-section="ai-chat" onclick="showSection('ai-chat', this)">
+                    <span class="nav-item-icon">🤖</span>
+                    <span>AI Assistant</span>
+                </div>
+
+                <div class="nav-section-title">Utilities</div>
+                <div class="nav-item" data-section="files" onclick="showSection('files', this)">
+                    <span class="nav-item-icon">📁</span>
+                    <span>Files</span>
+                </div>
+                <div class="nav-item" data-section="api-test" onclick="showSection('api-test', this)">
+                    <span class="nav-item-icon">🌐</span>
+                    <span>API Tester</span>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>System Online</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Toggle menu" aria-expanded="false">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
                     </button>
-                    <button class="btn btn-secondary" onclick="saveCode()">
-                        <span>💾</span>
-                        <span>Save</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="deployCode()">
-                        <span>🚀</span>
-                        <span>Deploy</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="clearEditor()">
-                        <span>🗑️</span>
-                        <span>Clear</span>
-                    </button>
+                    <h1 class="page-title" id="pageTitle">Code Editor</h1>
                 </div>
-                
-                <div class="output-display" id="editor-output">
-                    Output will appear here...
+                <div class="top-bar-right">
+                    <span id="currentDir" style="font-size: 12px; color: var(--text-muted);"></span>
                 </div>
-            </div>
-        </section>
-        
-        <!-- Bash Executor Section -->
-        <section class="content-section" id="bash-executor">
-            <div class="glass-card">
-                <h3>🔧 Bash Command Executor</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                    Execute bash commands with persistent working directory
-                </p>
-                
-                <div class="info-alert info">
-                    <strong>Current Directory:</strong> <span id="bash-pwd">Loading...</span>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Command</label>
-                    <input type="text" id="bash-command" placeholder="ls -la" />
-                </div>
-                
-                <button class="btn btn-primary" onclick="runBashCommand()">
-                    <span>▶️</span>
-                    <span>Execute</span>
-                </button>
-                
-                <div class="output-display" id="bash-output">
-                    Output will appear here...
-                </div>
-            </div>
-        </section>
-        
-        <!-- Python Eval Section -->
-        <section class="content-section" id="python-eval">
-            <div class="glass-card">
-                <h3>🐍 Python Evaluator</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                    Execute Python code with automatic JSON formatting
-                </p>
-                
-                <div class="form-group">
-                    <label class="form-label">Python Code</label>
-                    <textarea id="python-code" placeholder="import requests&#10;import json&#10;&#10;response = requests.get('https://api.github.com')&#10;print(json.dumps(response.json(), indent=2))"></textarea>
-                </div>
-                
-                <button class="btn btn-primary" onclick="runPythonCode()">
-                    <span>▶️</span>
-                    <span>Execute Python</span>
-                </button>
-                
-                <div class="output-display" id="python-output">
-                    Output will appear here...
-                </div>
-            </div>
-        </section>
-        
-        <!-- JavaScript Runner Section -->
-        <section class="content-section" id="javascript-runner">
-            <div class="glass-card">
-                <h3>⚡ JavaScript Runner (Node.js)</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                    Execute JavaScript code with Node.js runtime
-                </p>
-                
-                <div class="form-group">
-                    <label class="form-label">JavaScript Code</label>
-                    <textarea id="js-code" placeholder="console.log('Hello from Node.js!');&#10;const data = { name: 'HFS', version: '1.0' };&#10;console.log(JSON.stringify(data, null, 2));"></textarea>
-                </div>
-                
-                <button class="btn btn-primary" onclick="runJavaScriptCode()">
-                    <span>▶️</span>
-                    <span>Execute JavaScript</span>
-                </button>
-                
-                <div class="output-display" id="js-output">
-                    Output will appear here...
-                </div>
-            </div>
-        </section>
-        
-        <!-- AI Agent Section -->
-        <section class="content-section" id="ai-agent">
-            <div class="glass-card">
-                <h3>🤖 AI Code Agent (OpenAI GPT)</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                    Chat with AI to generate, review, and improve code
-                </p>
-                
-                <div class="info-alert warning" id="api-key-warning">
-                    <strong>⚠️ API Key Required:</strong> Configure your OpenAI API key below.<br>
-                    <small>🔒 Security Note: API keys are sent to the server for OpenAI requests. For production use, consider implementing server-side key storage.</small>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">OpenAI API Key</label>
-                    <input type="password" id="openai-api-key" placeholder="sk-..." />
-                </div>
-                
-                <div class="ai-chat-container">
-                    <div class="chat-messages" id="chat-messages">
-                        <div class="chat-message ai">
-                            Hello! I'm your AI coding assistant. I can help you write, debug, and improve code. What would you like to create today?
+            </header>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Code Editor Section -->
+                <section class="section active" id="editor">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Code Editor</h2>
+                            <p class="card-description">Write and execute code in multiple languages</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="lang-selector">
+                                <button class="lang-btn active" data-lang="python" onclick="setLanguage('python', this)">Python</button>
+                                <button class="lang-btn" data-lang="javascript" onclick="setLanguage('javascript', this)">JavaScript</button>
+                                <button class="lang-btn" data-lang="html" onclick="setLanguage('html', this)">HTML</button>
+                                <button class="lang-btn" data-lang="css" onclick="setLanguage('css', this)">CSS</button>
+                                <button class="lang-btn" data-lang="json" onclick="setLanguage('json', this)">JSON</button>
+                                <button class="lang-btn" data-lang="bash" onclick="setLanguage('bash', this)">Bash</button>
+                            </div>
+
+                            <div class="editor-wrapper">
+                                <div class="editor-container" id="monacoEditor"></div>
+                            </div>
+
+                            <div class="btn-group">
+                                <button class="btn btn-primary btn-lg" onclick="runEditorCode()" id="runBtn">
+                                    <span>▶</span> Run Code
+                                </button>
+                                <button class="btn btn-secondary" onclick="saveCode()">
+                                    <span>💾</span> Download
+                                </button>
+                                <button class="btn btn-secondary" onclick="clearEditor()">
+                                    <span>🗑️</span> Clear
+                                </button>
+                            </div>
+
+                            <div style="margin-top: var(--space-5);">
+                                <div class="output-label">Output</div>
+                                <div class="output-panel" id="editorOutput">Click "Run Code" to see output...</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="chat-input-area">
-                        <input type="text" class="chat-input" id="ai-prompt" placeholder="Ask AI to generate code..." />
-                        <button class="btn btn-primary" onclick="sendAIMessage()">
-                            <span>Send</span>
-                        </button>
+                </section>
+
+                <!-- Terminal Section -->
+                <section class="section" id="terminal">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Terminal</h2>
+                            <p class="card-description">Execute shell commands with persistent directory</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <span class="alert-icon">📂</span>
+                                <div>
+                                    <strong>Current Directory:</strong>
+                                    <span id="terminalPwd">Loading...</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Command</label>
+                                <input type="text" class="form-input" id="terminalInput" placeholder="Enter command (e.g., ls -la)">
+                            </div>
+
+                            <button class="btn btn-primary btn-lg" onclick="runTerminalCommand()" id="terminalRunBtn">
+                                <span>▶</span> Execute
+                            </button>
+
+                            <div style="margin-top: var(--space-5);">
+                                <div class="output-label">Output</div>
+                                <div class="output-panel" id="terminalOutput">Enter a command to see output...</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="action-buttons" style="margin-top: 20px;">
-                    <button class="btn btn-secondary" onclick="insertAICodeToEditor()">
-                        <span>📝</span>
-                        <span>Insert to Editor</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="clearAIChat()">
-                        <span>🗑️</span>
-                        <span>Clear Chat</span>
-                    </button>
-                </div>
+                </section>
+
+                <!-- Python Section -->
+                <section class="section" id="python">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Python Executor</h2>
+                            <p class="card-description">Run Python code with full system access</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label class="form-label">Python Code</label>
+                                <textarea class="form-textarea" id="pythonCode" rows="10" placeholder="import json&#10;&#10;data = {'message': 'Hello World'}&#10;print(json.dumps(data, indent=2))"></textarea>
+                            </div>
+
+                            <button class="btn btn-primary btn-lg" onclick="runPython()" id="pythonRunBtn">
+                                <span>▶</span> Run Python
+                            </button>
+
+                            <div style="margin-top: var(--space-5);">
+                                <div class="output-label">Output</div>
+                                <div class="output-panel" id="pythonOutput">Click "Run Python" to see output...</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- JavaScript Section -->
+                <section class="section" id="javascript">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">JavaScript Executor</h2>
+                            <p class="card-description">Run JavaScript code with Node.js</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label class="form-label">JavaScript Code</label>
+                                <textarea class="form-textarea" id="jsCode" rows="10" placeholder="const data = { message: 'Hello World' };&#10;console.log(JSON.stringify(data, null, 2));"></textarea>
+                            </div>
+
+                            <button class="btn btn-primary btn-lg" onclick="runJavaScript()" id="jsRunBtn">
+                                <span>▶</span> Run JavaScript
+                            </button>
+
+                            <div style="margin-top: var(--space-5);">
+                                <div class="output-label">Output</div>
+                                <div class="output-panel" id="jsOutput">Click "Run JavaScript" to see output...</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AI Chat Section -->
+                <section class="section" id="ai-chat">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">AI Assistant</h2>
+                            <p class="card-description">Chat with AI to generate and improve code</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <span class="alert-icon">🔑</span>
+                                <div>
+                                    <strong>API Key Required</strong>
+                                    <p style="margin-top: 4px; font-size: 12px;">Enter your OpenAI API key to use the AI assistant.</p>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">OpenAI API Key</label>
+                                <input type="password" class="form-input" id="apiKey" placeholder="sk-...">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Model</label>
+                                <div class="model-config">
+                                    <div class="model-option active" data-model="gpt-3.5-turbo" onclick="selectModel('gpt-3.5-turbo', this)">
+                                        <div class="model-option-name">GPT-3.5 Turbo</div>
+                                        <div class="model-option-desc">Fast and cost-effective</div>
+                                    </div>
+                                    <div class="model-option" data-model="gpt-4" onclick="selectModel('gpt-4', this)">
+                                        <div class="model-option-name">GPT-4</div>
+                                        <div class="model-option-desc">Most capable model</div>
+                                    </div>
+                                    <div class="model-option" data-model="gpt-4o" onclick="selectModel('gpt-4o', this)">
+                                        <div class="model-option-name">GPT-4o</div>
+                                        <div class="model-option-desc">Latest multimodal</div>
+                                    </div>
+                                    <div class="model-option" data-model="custom" onclick="selectModel('custom', this)">
+                                        <div class="model-option-name">Custom Model</div>
+                                        <div class="model-option-desc">Enter your own</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" id="customModelGroup" style="display: none;">
+                                <label class="form-label">Custom Model Name</label>
+                                <input type="text" class="form-input" id="customModelName" placeholder="e.g., gpt-4-turbo-preview">
+                            </div>
+
+                            <div class="chat-container">
+                                <div class="chat-messages" id="chatMessages">
+                                    <div class="chat-message ai">
+                                        <div class="chat-bubble">
+                                            Hello! I'm your AI coding assistant. I can help you write, debug, and improve code. What would you like to create?
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="chat-input-area">
+                                    <input type="text" class="form-input" id="chatInput" placeholder="Ask me anything about code...">
+                                    <button class="btn btn-primary" onclick="sendChatMessage()" id="chatSendBtn">Send</button>
+                                </div>
+                            </div>
+
+                            <div class="btn-group" style="margin-top: var(--space-4);">
+                                <button class="btn btn-secondary" onclick="insertToEditor()">
+                                    <span>📝</span> Insert to Editor
+                                </button>
+                                <button class="btn btn-secondary" onclick="clearChat()">
+                                    <span>🗑️</span> Clear Chat
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Files Section -->
+                <section class="section" id="files">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">File Manager</h2>
+                            <p class="card-description">Upload and manage files</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label class="form-label">Upload Python File</label>
+                                <input type="file" class="form-input" id="fileUpload" accept=".py">
+                            </div>
+
+                            <button class="btn btn-primary" onclick="uploadAndRun()" id="uploadBtn">
+                                <span>⬆️</span> Upload &amp; Execute
+                            </button>
+
+                            <hr style="border: none; border-top: 1px solid var(--border); margin: var(--space-6) 0;">
+
+                            <div class="form-group">
+                                <label class="form-label">Save Editor Content As</label>
+                                <input type="text" class="form-input" id="saveFilename" placeholder="script.py">
+                            </div>
+
+                            <button class="btn btn-secondary" onclick="saveToServer()">
+                                <span>💾</span> Save to Server
+                            </button>
+
+                            <div style="margin-top: var(--space-5);">
+                                <div class="output-label">Status</div>
+                                <div class="output-panel" id="fileOutput">File operations will appear here...</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- API Tester Section -->
+                <section class="section" id="api-test">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">API Tester</h2>
+                            <p class="card-description">Test HTTP endpoints with formatted responses</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label class="form-label">HTTP Method</label>
+                                <select class="form-select" id="apiMethod">
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="DELETE">DELETE</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">URL</label>
+                                <input type="text" class="form-input" id="apiUrl" placeholder="https://api.example.com/endpoint">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Headers (JSON)</label>
+                                <textarea class="form-textarea" id="apiHeaders" rows="3" placeholder='{"Authorization": "Bearer token"}'></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Body (JSON)</label>
+                                <textarea class="form-textarea" id="apiBody" rows="5" placeholder='{"key": "value"}'></textarea>
+                            </div>
+
+                            <button class="btn btn-primary btn-lg" onclick="testApi()" id="apiTestBtn">
+                                <span>🚀</span> Send Request
+                            </button>
+
+                            <div style="margin-top: var(--space-5);">
+                                <div class="output-label">Response</div>
+                                <div class="output-panel" id="apiOutput">API response will appear here...</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
-        </section>
-        
-        <!-- File Manager Section -->
-        <section class="content-section" id="file-manager">
-            <div class="glass-card">
-                <h3>📁 File Manager</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                    Upload, save, and manage your code files
-                </p>
-                
-                <div class="form-group">
-                    <label class="form-label">Upload File</label>
-                    <input type="file" id="file-upload" />
-                </div>
-                
-                <button class="btn btn-primary" onclick="uploadFile()">
-                    <span>⬆️</span>
-                    <span>Upload & Execute</span>
-                </button>
-                
-                <div class="form-group" style="margin-top: 30px;">
-                    <label class="form-label">Save Current Code As</label>
-                    <input type="text" id="save-filename" placeholder="script.py" />
-                </div>
-                
-                <button class="btn btn-secondary" onclick="saveFileLocally()">
-                    <span>💾</span>
-                    <span>Save to Server</span>
-                </button>
-                
-                <div class="output-display" id="file-output">
-                    File operations will appear here...
-                </div>
-            </div>
-        </section>
-        
-        <!-- API Tester Section -->
-        <section class="content-section" id="api-tester">
-            <div class="glass-card">
-                <h3>🌐 API Tester</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                    Test API endpoints with formatted JSON responses
-                </p>
-                
-                <div class="form-group">
-                    <label class="form-label">HTTP Method</label>
-                    <select id="api-method">
-                        <option value="GET">GET</option>
-                        <option value="POST">POST</option>
-                        <option value="PUT">PUT</option>
-                        <option value="DELETE">DELETE</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">API URL</label>
-                    <input type="text" id="api-url" placeholder="https://api.example.com/endpoint" />
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Headers (JSON)</label>
-                    <textarea id="api-headers" placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Body (JSON)</label>
-                    <textarea id="api-body" placeholder='{"key": "value"}'></textarea>
-                </div>
-                
-                <button class="btn btn-primary" onclick="testAPI()">
-                    <span>🚀</span>
-                    <span>Send Request</span>
-                </button>
-                
-                <div class="output-display" id="api-output">
-                    API response will appear here...
-                </div>
-            </div>
-        </section>
-    </main>
-    
+        </main>
+    </div>
+
     <script>
-        // Global variables
+        // ===== Global State =====
         let editor = null;
-        let currentLanguage = 'python';
+        let currentLang = 'python';
+        let selectedModel = 'gpt-3.5-turbo';
         let lastAIResponse = '';
-        
-        // Initialize Monaco Editor
+
+        // ===== Monaco Editor Setup =====
         require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
-        
+
         require(['vs/editor/editor.main'], function() {
-            editor = monaco.editor.create(document.getElementById('editor'), {
-                value: '# Write your Python code here\nimport json\n\ndata = {"message": "Hello from HFS Platform!"}\nprint(json.dumps(data, indent=2))',
+            editor = monaco.editor.create(document.getElementById('monacoEditor'), {
+                value: '# Python Code\nimport json\n\ndata = {"message": "Hello from HFS!"}\nprint(json.dumps(data, indent=2))',
                 language: 'python',
                 theme: 'vs-dark',
                 automaticLayout: true,
                 fontSize: 14,
-                minimap: { enabled: true },
+                fontFamily: "'JetBrains Mono', monospace",
+                minimap: { enabled: false },
                 scrollBeyondLastLine: false,
-                wordWrap: 'on'
+                wordWrap: 'on',
+                padding: { top: 16, bottom: 16 },
+                lineNumbers: 'on',
+                renderLineHighlight: 'line',
+                cursorBlinking: 'smooth'
             });
         });
-        
-        // Sidebar toggle
+
+        // ===== Sidebar Functions =====
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            const mainContainer = document.getElementById('mainContainer');
-            sidebar.classList.toggle('hidden');
-            if (sidebar.classList.contains('hidden')) {
-                mainContainer.classList.add('full-width');
-            } else {
-                mainContainer.classList.remove('full-width');
-            }
+            const overlay = document.getElementById('sidebarOverlay');
+            const menuToggle = document.getElementById('menuToggle');
+            const isOpen = sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+            document.body.classList.toggle('sidebar-open', isOpen);
+            if (menuToggle) menuToggle.setAttribute('aria-expanded', isOpen);
         }
-        
-        // Section navigation
-        function showSection(sectionId, event) {
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const menuToggle = document.getElementById('menuToggle');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+            if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
+        }
+
+        // ===== Navigation =====
+        function showSection(sectionId, navItem) {
             // Hide all sections
-            document.querySelectorAll('.content-section').forEach(section => {
-                section.classList.remove('active');
-            });
-            
-            // Remove active from all sidebar items
-            document.querySelectorAll('.sidebar-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Show selected section
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            // Show target section
             document.getElementById(sectionId).classList.add('active');
-            if (event && event.target) {
-                event.target.closest('.sidebar-item').classList.add('active');
-            }
-            
-            // Update title
+
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            if (navItem) navItem.classList.add('active');
+
+            // Update page title
             const titles = {
-                'code-editor': 'Code Editor',
-                'bash-executor': 'Bash Executor',
-                'python-eval': 'Python Evaluator',
-                'javascript-runner': 'JavaScript Runner',
-                'ai-agent': 'AI Agent (GPT)',
-                'file-manager': 'File Manager',
-                'api-tester': 'API Tester'
+                'editor': 'Code Editor',
+                'terminal': 'Terminal',
+                'python': 'Python',
+                'javascript': 'JavaScript',
+                'ai-chat': 'AI Assistant',
+                'files': 'Files',
+                'api-test': 'API Tester'
             };
-            document.getElementById('section-title').textContent = titles[sectionId];
-            
-            // Load PWD for bash
-            if (sectionId === 'bash-executor') {
-                updatePWD();
+            document.getElementById('pageTitle').textContent = titles[sectionId] || 'HFS';
+
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+
+            // Load specific data
+            if (sectionId === 'terminal') {
+                updatePwd();
             }
         }
-        
-        // Change editor language
-        function changeEditorLanguage(lang, event) {
-            currentLanguage = lang;
+
+        // ===== Language Selector =====
+        function setLanguage(lang, btn) {
+            currentLang = lang;
             if (editor) {
-                monaco.editor.setModelLanguage(editor.getModel(), lang);
+                monaco.editor.setModelLanguage(editor.getModel(), lang === 'bash' ? 'shell' : lang);
             }
-            
-            // Update active button
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            if (event && event.target) {
-                event.target.classList.add('active');
-            }
-            
-            // Set default code
-            const defaults = {
-                python: '# Write your Python code here\nimport json\n\ndata = {"message": "Hello from Python!"}\nprint(json.dumps(data, indent=2))',
-                javascript: '// Write your JavaScript code here\nconst data = { message: "Hello from JavaScript!" };\nconsole.log(JSON.stringify(data, null, 2));',
-                html: '<!DOCTYPE html>\n<html>\n<head>\n    <title>My Page</title>\n</head>\n<body>\n    <h1>Hello World!</h1>\n</body>\n</html>',
-                css: '/* Write your CSS code here */\nbody {\n    font-family: Arial, sans-serif;\n    background: #f0f0f0;\n}',
-                json: '{\n    "name": "HFS Platform",\n    "version": "1.0",\n    "features": ["Code Editor", "AI Agent", "Multi-language"]\n}',
-                bash: '#!/bin/bash\n# Write your bash script here\necho "Hello from Bash!"'
+
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            const templates = {
+                python: '# Python Code\nimport json\n\ndata = {"message": "Hello from HFS!"}\nprint(json.dumps(data, indent=2))',
+                javascript: '// JavaScript Code\nconst data = { message: "Hello from HFS!" };\nconsole.log(JSON.stringify(data, null, 2));',
+                html: '<!DOCTYPE html>\n<html>\n<head>\n    <title>Page</title>\n</head>\n<body>\n    <h1>Hello World</h1>\n</body>\n</html>',
+                css: '/* CSS Styles */\nbody {\n    font-family: sans-serif;\n    background: #f0f0f0;\n}',
+                json: '{\n    "name": "HFS",\n    "version": "1.0"\n}',
+                bash: '#!/bin/bash\necho "Hello from Bash!"'
             };
-            
-            if (editor && defaults[lang]) {
-                editor.setValue(defaults[lang]);
+
+            if (editor && templates[lang]) {
+                editor.setValue(templates[lang]);
             }
         }
-        
-        // Run code from editor
-        async function runCode() {
+
+        // ===== Model Selector =====
+        function selectModel(model, el) {
+            selectedModel = model;
+            document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
+            el.classList.add('active');
+
+            const customGroup = document.getElementById('customModelGroup');
+            customGroup.style.display = model === 'custom' ? 'block' : 'none';
+        }
+
+        // ===== API Helpers =====
+        async function apiCall(endpoint, data) {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...data, admin_id: 'web-console' })
+            });
+            return response.json();
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span> Running...';
+            } else {
+                btn.disabled = false;
+                // Restore original text based on button
+                const texts = {
+                    'runBtn': '<span>▶</span> Run Code',
+                    'terminalRunBtn': '<span>▶</span> Execute',
+                    'pythonRunBtn': '<span>▶</span> Run Python',
+                    'jsRunBtn': '<span>▶</span> Run JavaScript',
+                    'chatSendBtn': 'Send',
+                    'uploadBtn': '<span>⬆️</span> Upload &amp; Execute',
+                    'apiTestBtn': '<span>🚀</span> Send Request'
+                };
+                btn.innerHTML = texts[btnId] || 'Run';
+            }
+        }
+
+        function showOutput(elementId, text, isError = false) {
+            const el = document.getElementById(elementId);
+            el.textContent = text;
+            el.className = 'output-panel' + (isError ? ' error' : ' success');
+        }
+
+        // ===== Editor Functions =====
+        async function runEditorCode() {
+            if (!editor) return;
             const code = editor.getValue();
-            const output = document.getElementById('editor-output');
-            
-            output.textContent = 'Executing...';
-            output.className = 'output-display';
-            
+            setLoading('runBtn', true);
+
             try {
-                let response;
-                if (currentLanguage === 'python') {
-                    response = await fetch('/api/eval', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ code: code, admin_id: 'web-console' })
-                    });
-                } else if (currentLanguage === 'javascript') {
-                    response = await fetch('/api/run-javascript', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ code: code, admin_id: 'web-console' })
-                    });
-                } else if (currentLanguage === 'bash') {
-                    response = await fetch('/api/execute', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ command: code, admin_id: 'web-console' })
-                    });
+                let result;
+                if (currentLang === 'python') {
+                    result = await apiCall('/api/eval', { code });
+                } else if (currentLang === 'javascript') {
+                    result = await apiCall('/api/run-javascript', { code });
+                } else if (currentLang === 'bash') {
+                    result = await apiCall('/api/execute', { command: code });
                 } else {
-                    output.textContent = '❌ Language not supported for execution yet';
-                    output.classList.add('error');
+                    showOutput('editorOutput', 'Language not supported for execution', true);
                     return;
                 }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    output.textContent = data.output;
-                    output.classList.add('success');
-                    
-                    // Try to format as JSON if possible
-                    try {
-                        const jsonMatch = data.output.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-                        if (jsonMatch) {
-                            const jsonObj = JSON.parse(jsonMatch[0]);
-                            output.textContent = JSON.stringify(jsonObj, null, 2);
-                        }
-                    } catch (e) {
-                        // Not JSON, keep original output
-                    }
-                } else {
-                    output.textContent = '❌ Error:\n\n' + data.error;
-                    output.classList.add('error');
-                }
-            } catch (error) {
-                output.textContent = '❌ Network error: ' + error.message;
-                output.classList.add('error');
+
+                showOutput('editorOutput', result.success ? result.output : result.error, !result.success);
+            } catch (err) {
+                showOutput('editorOutput', 'Error: ' + err.message, true);
+            } finally {
+                setLoading('runBtn', false);
             }
         }
-        
-        // Save code
+
         function saveCode() {
+            if (!editor) return;
             const code = editor.getValue();
+            const ext = { python: 'py', javascript: 'js', html: 'html', css: 'css', json: 'json', bash: 'sh' };
             const blob = new Blob([code], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `code.${currentLanguage === 'javascript' ? 'js' : currentLanguage}`;
+            a.href = URL.createObjectURL(blob);
+            a.download = 'code.' + (ext[currentLang] || 'txt');
             a.click();
         }
-        
-        // Deploy code
-        async function deployCode() {
-            alert('Deploy functionality - save to server and make available via URL');
-        }
-        
-        // Clear editor
+
         function clearEditor() {
-            if (editor) {
-                editor.setValue('');
-            }
+            if (editor) editor.setValue('');
         }
-        
-        // Update PWD
-        async function updatePWD() {
+
+        // ===== Terminal Functions =====
+        async function updatePwd() {
             try {
                 const response = await fetch('/api/pwd');
                 const data = await response.json();
                 if (data.success) {
-                    document.getElementById('bash-pwd').textContent = data.cwd;
+                    document.getElementById('terminalPwd').textContent = data.cwd;
+                    document.getElementById('currentDir').textContent = data.cwd;
                 }
-            } catch (error) {
-                document.getElementById('bash-pwd').textContent = 'Unknown';
+            } catch (e) {
+                document.getElementById('terminalPwd').textContent = 'Unknown';
             }
         }
-        
-        // Run bash command
-        async function runBashCommand() {
-            const command = document.getElementById('bash-command').value;
-            const output = document.getElementById('bash-output');
-            
-            output.textContent = 'Executing...';
-            output.className = 'output-display';
-            
+
+        async function runTerminalCommand() {
+            const command = document.getElementById('terminalInput').value.trim();
+            if (!command) return;
+
+            setLoading('terminalRunBtn', true);
+
             try {
-                const response = await fetch('/api/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: command, admin_id: 'web-console' })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    output.textContent = data.output;
-                    output.classList.add('success');
-                    updatePWD();
-                } else {
-                    output.textContent = '❌ Error:\n\n' + data.error;
-                    output.classList.add('error');
-                }
-            } catch (error) {
-                output.textContent = '❌ Network error: ' + error.message;
-                output.classList.add('error');
+                const result = await apiCall('/api/execute', { command });
+                showOutput('terminalOutput', result.success ? result.output : result.error, !result.success);
+                if (result.success) updatePwd();
+            } catch (err) {
+                showOutput('terminalOutput', 'Error: ' + err.message, true);
+            } finally {
+                setLoading('terminalRunBtn', false);
             }
         }
-        
-        // Run Python code
-        async function runPythonCode() {
-            const code = document.getElementById('python-code').value;
-            const output = document.getElementById('python-output');
-            
-            output.textContent = 'Executing Python...';
-            output.className = 'output-display';
-            
+
+        // ===== Python Functions =====
+        async function runPython() {
+            const code = document.getElementById('pythonCode').value.trim();
+            if (!code) return;
+
+            setLoading('pythonRunBtn', true);
+
             try {
-                const response = await fetch('/api/eval', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: code, admin_id: 'web-console' })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Try to format JSON
-                    let displayOutput = data.output;
-                    try {
-                        const jsonMatch = data.output.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-                        if (jsonMatch) {
-                            const jsonObj = JSON.parse(jsonMatch[0]);
-                            displayOutput = JSON.stringify(jsonObj, null, 2);
-                        }
-                    } catch (e) {
-                        // Not JSON, use original
-                    }
-                    
-                    output.textContent = displayOutput;
-                    output.classList.add('success');
-                } else {
-                    output.textContent = '❌ Error:\n\n' + data.error;
-                    output.classList.add('error');
-                }
-            } catch (error) {
-                output.textContent = '❌ Network error: ' + error.message;
-                output.classList.add('error');
+                const result = await apiCall('/api/eval', { code });
+                showOutput('pythonOutput', result.success ? result.output : result.error, !result.success);
+            } catch (err) {
+                showOutput('pythonOutput', 'Error: ' + err.message, true);
+            } finally {
+                setLoading('pythonRunBtn', false);
             }
         }
-        
-        // Run JavaScript code
-        async function runJavaScriptCode() {
-            const code = document.getElementById('js-code').value;
-            const output = document.getElementById('js-output');
-            
-            output.textContent = 'Executing JavaScript...';
-            output.className = 'output-display';
-            
+
+        // ===== JavaScript Functions =====
+        async function runJavaScript() {
+            const code = document.getElementById('jsCode').value.trim();
+            if (!code) return;
+
+            setLoading('jsRunBtn', true);
+
             try {
-                const response = await fetch('/api/run-javascript', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: code, admin_id: 'web-console' })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    output.textContent = data.output;
-                    output.classList.add('success');
-                } else {
-                    output.textContent = '❌ Error:\n\n' + data.error;
-                    output.classList.add('error');
-                }
-            } catch (error) {
-                output.textContent = '❌ Network error: ' + error.message;
-                output.classList.add('error');
+                const result = await apiCall('/api/run-javascript', { code });
+                showOutput('jsOutput', result.success ? result.output : result.error, !result.success);
+            } catch (err) {
+                showOutput('jsOutput', 'Error: ' + err.message, true);
+            } finally {
+                setLoading('jsRunBtn', false);
             }
         }
-        
-        // Send AI message
-        async function sendAIMessage() {
-            const prompt = document.getElementById('ai-prompt').value;
-            const apiKey = document.getElementById('openai-api-key').value;
-            const messagesDiv = document.getElementById('chat-messages');
-            
-            if (!prompt.trim()) return;
-            if (!apiKey.trim()) {
+
+        // ===== AI Chat Functions =====
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const prompt = input.value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            if (!prompt) return;
+            if (!apiKey) {
                 alert('Please enter your OpenAI API key');
                 return;
             }
-            
+
+            const messagesDiv = document.getElementById('chatMessages');
+
             // Add user message
             const userMsg = document.createElement('div');
             userMsg.className = 'chat-message user';
-            userMsg.textContent = prompt;
+            userMsg.innerHTML = '<div class="chat-bubble">' + escapeHtml(prompt) + '</div>';
             messagesDiv.appendChild(userMsg);
-            
-            // Clear input
-            document.getElementById('ai-prompt').value = '';
-            
-            // Add loading message
+
+            input.value = '';
+
+            // Add loading
             const loadingMsg = document.createElement('div');
             loadingMsg.className = 'chat-message ai';
-            loadingMsg.innerHTML = '<span class="spinner"></span> Thinking...';
+            loadingMsg.innerHTML = '<div class="chat-bubble"><span class="spinner"></span> Thinking...</div>';
             messagesDiv.appendChild(loadingMsg);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
+
+            setLoading('chatSendBtn', true);
+
             try {
-                const response = await fetch('/api/ai-chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        prompt: prompt, 
-                        api_key: apiKey,
-                        admin_id: 'web-console'
-                    })
+                const model = selectedModel === 'custom' 
+                    ? document.getElementById('customModelName').value.trim() 
+                    : selectedModel;
+
+                const result = await apiCall('/api/ai-chat', { 
+                    prompt, 
+                    api_key: apiKey,
+                    model: model || 'gpt-3.5-turbo'
                 });
-                
-                const data = await response.json();
-                
-                // Remove loading message
+
                 messagesDiv.removeChild(loadingMsg);
-                
-                // Add AI response
+
                 const aiMsg = document.createElement('div');
                 aiMsg.className = 'chat-message ai';
-                if (data.success) {
-                    aiMsg.textContent = data.response;
-                    lastAIResponse = data.response;
+                if (result.success) {
+                    aiMsg.innerHTML = '<div class="chat-bubble">' + formatAIResponse(result.response) + '</div>';
+                    lastAIResponse = result.response;
                 } else {
-                    aiMsg.textContent = '❌ Error: ' + data.error;
+                    aiMsg.innerHTML = '<div class="chat-bubble" style="color: var(--error);">Error: ' + escapeHtml(result.error) + '</div>';
                 }
                 messagesDiv.appendChild(aiMsg);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                
-            } catch (error) {
+            } catch (err) {
                 messagesDiv.removeChild(loadingMsg);
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'chat-message ai';
-                errorMsg.textContent = '❌ Network error: ' + error.message;
-                messagesDiv.appendChild(errorMsg);
+                const errMsg = document.createElement('div');
+                errMsg.className = 'chat-message ai';
+                errMsg.innerHTML = '<div class="chat-bubble" style="color: var(--error);">Error: ' + escapeHtml(err.message) + '</div>';
+                messagesDiv.appendChild(errMsg);
+            } finally {
+                setLoading('chatSendBtn', false);
             }
         }
-        
-        // Insert AI code to editor
-        function insertAICodeToEditor() {
-            if (lastAIResponse && editor) {
-                // Extract code blocks from AI response
-                const codeMatch = lastAIResponse.match(/```[\w]*\n([\s\S]*?)```/);
-                if (codeMatch) {
-                    editor.setValue(codeMatch[1].trim());
-                } else {
-                    editor.setValue(lastAIResponse);
-                }
-                showSection('code-editor');
-            }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
-        
-        // Clear AI chat
-        function clearAIChat() {
-            const messagesDiv = document.getElementById('chat-messages');
-            messagesDiv.innerHTML = `
+
+        function formatAIResponse(text) {
+            // Basic markdown-like formatting
+            let html = escapeHtml(text);
+            // Code blocks
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre style="background: var(--bg-primary); padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0;"><code>$2</code></pre>');
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">$1</code>');
+            // Line breaks
+            html = html.replace(/\n/g, '<br>');
+            return html;
+        }
+
+        function insertToEditor() {
+            if (!lastAIResponse || !editor) return;
+            const codeMatch = lastAIResponse.match(/```[\w]*\n([\s\S]*?)```/);
+            editor.setValue(codeMatch ? codeMatch[1].trim() : lastAIResponse);
+            showSection('editor', document.querySelector('[data-section="editor"]'));
+        }
+
+        function clearChat() {
+            document.getElementById('chatMessages').innerHTML = `
                 <div class="chat-message ai">
-                    Hello! I'm your AI coding assistant. I can help you write, debug, and improve code. What would you like to create today?
+                    <div class="chat-bubble">Hello! I'm your AI coding assistant. I can help you write, debug, and improve code. What would you like to create?</div>
                 </div>
             `;
             lastAIResponse = '';
         }
-        
-        // Upload file
-        async function uploadFile() {
-            const fileInput = document.getElementById('file-upload');
-            const output = document.getElementById('file-output');
-            
-            if (!fileInput.files || fileInput.files.length === 0) {
-                output.textContent = '❌ Please select a file';
-                output.classList.add('error');
+
+        // ===== File Functions =====
+        async function uploadAndRun() {
+            const fileInput = document.getElementById('fileUpload');
+            if (!fileInput.files || !fileInput.files[0]) {
+                showOutput('fileOutput', 'Please select a file', true);
                 return;
             }
-            
+
             const file = fileInput.files[0];
             const formData = new FormData();
             formData.append('file', file);
             formData.append('admin_id', 'web-console');
-            
-            output.textContent = 'Uploading and executing...';
-            output.className = 'output-display';
-            
+
+            setLoading('uploadBtn', true);
+
             try {
-                const response = await fetch('/api/run-file', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    output.textContent = '✅ File executed successfully:\n\n' + data.output;
-                    output.classList.add('success');
-                } else {
-                    output.textContent = '❌ Error:\n\n' + data.error;
-                    output.classList.add('error');
-                }
-            } catch (error) {
-                output.textContent = '❌ Network error: ' + error.message;
-                output.classList.add('error');
+                const response = await fetch('/api/run-file', { method: 'POST', body: formData });
+                const result = await response.json();
+                showOutput('fileOutput', result.success ? result.output : result.error, !result.success);
+            } catch (err) {
+                showOutput('fileOutput', 'Error: ' + err.message, true);
+            } finally {
+                setLoading('uploadBtn', false);
             }
         }
-        
-        // Save file locally
-        async function saveFileLocally() {
-            const filename = document.getElementById('save-filename').value;
-            const output = document.getElementById('file-output');
-            
-            if (!filename.trim()) {
-                output.textContent = '❌ Please enter a filename';
-                output.classList.add('error');
+
+        async function saveToServer() {
+            const filename = document.getElementById('saveFilename').value.trim();
+            if (!filename) {
+                showOutput('fileOutput', 'Please enter a filename', true);
                 return;
             }
-            
-            const code = editor.getValue();
-            
-            output.textContent = 'Saving file...';
-            output.className = 'output-display';
-            
+
+            if (!editor) return;
+
             try {
-                const response = await fetch('/api/save-file', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        filename: filename,
-                        content: code,
-                        admin_id: 'web-console'
-                    })
+                const result = await apiCall('/api/save-file', { 
+                    filename, 
+                    content: editor.getValue() 
                 });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    output.textContent = '✅ File saved successfully: ' + data.path;
-                    output.classList.add('success');
-                } else {
-                    output.textContent = '❌ Error:\n\n' + data.error;
-                    output.classList.add('error');
-                }
-            } catch (error) {
-                output.textContent = '❌ Network error: ' + error.message;
-                output.classList.add('error');
+                showOutput('fileOutput', result.success ? 'Saved: ' + result.path : result.error, !result.success);
+            } catch (err) {
+                showOutput('fileOutput', 'Error: ' + err.message, true);
             }
         }
-        
-        // Test API
-        async function testAPI() {
-            const method = document.getElementById('api-method').value;
-            const url = document.getElementById('api-url').value;
-            const headersText = document.getElementById('api-headers').value;
-            const bodyText = document.getElementById('api-body').value;
-            const output = document.getElementById('api-output');
-            
-            if (!url.trim()) {
-                output.textContent = '❌ Please enter an API URL';
-                output.classList.add('error');
+
+        // ===== API Tester Functions =====
+        async function testApi() {
+            const method = document.getElementById('apiMethod').value;
+            const url = document.getElementById('apiUrl').value.trim();
+            if (!url) {
+                showOutput('apiOutput', 'Please enter a URL', true);
                 return;
             }
-            
-            output.textContent = 'Sending request...';
-            output.className = 'output-display';
-            
+
+            setLoading('apiTestBtn', true);
+
             try {
-                const response = await fetch('/api/test-api', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        method: method,
-                        url: url,
-                        headers: headersText,
-                        body: bodyText,
-                        admin_id: 'web-console'
-                    })
+                const result = await apiCall('/api/test-api', {
+                    method,
+                    url,
+                    headers: document.getElementById('apiHeaders').value,
+                    body: document.getElementById('apiBody').value
                 });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Format JSON response
+
+                if (result.success) {
                     try {
-                        const jsonObj = JSON.parse(data.response);
-                        output.textContent = JSON.stringify(jsonObj, null, 2);
-                    } catch (e) {
-                        output.textContent = data.response;
+                        const json = JSON.parse(result.response);
+                        showOutput('apiOutput', JSON.stringify(json, null, 2));
+                    } catch {
+                        showOutput('apiOutput', result.response);
                     }
-                    output.classList.add('success');
                 } else {
-                    output.textContent = '❌ Error:\n\n' + data.error;
-                    output.classList.add('error');
+                    showOutput('apiOutput', result.error, true);
                 }
-            } catch (error) {
-                output.textContent = '❌ Network error: ' + error.message;
-                output.classList.add('error');
+            } catch (err) {
+                showOutput('apiOutput', 'Error: ' + err.message, true);
+            } finally {
+                setLoading('apiTestBtn', false);
             }
         }
-        
-        // Initialize PWD on load
-        window.addEventListener('DOMContentLoaded', () => {
-            updatePWD();
-        });
-        
-        // Enable Enter key for bash and AI
-        document.getElementById('bash-command')?.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') runBashCommand();
-        });
-        
-        document.getElementById('ai-prompt')?.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendAIMessage();
+
+        // ===== Initialize =====
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePwd();
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 768) {
+                    closeSidebar();
+                }
+            });
+
+            // Add keyboard event listeners (using keydown instead of deprecated keypress)
+            const terminalInput = document.getElementById('terminalInput');
+            if (terminalInput) {
+                terminalInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') runTerminalCommand();
+                });
+            }
+
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') sendChatMessage();
+                });
+            }
         });
     </script>
 </body>
