@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HFS Code Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -79,6 +79,10 @@
             min-height: 100vh;
             line-height: 1.5;
             overflow-x: hidden;
+        }
+
+        body.sidebar-open {
+            overflow: hidden;
         }
 
         /* ===== LAYOUT ===== */
@@ -834,7 +838,7 @@
             <!-- Top Bar -->
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+                    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Toggle menu" aria-expanded="false">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="3" y1="6" x2="21" y2="6"></line>
                             <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -909,7 +913,7 @@
 
                             <div class="form-group">
                                 <label class="form-label">Command</label>
-                                <input type="text" class="form-input" id="terminalInput" placeholder="Enter command (e.g., ls -la)" onkeypress="handleTerminalKeypress(event)">
+                                <input type="text" class="form-input" id="terminalInput" placeholder="Enter command (e.g., ls -la)">
                             </div>
 
                             <button class="btn btn-primary btn-lg" onclick="runTerminalCommand()" id="terminalRunBtn">
@@ -1031,7 +1035,7 @@
                                     </div>
                                 </div>
                                 <div class="chat-input-area">
-                                    <input type="text" class="form-input" id="chatInput" placeholder="Ask me anything about code..." onkeypress="handleChatKeypress(event)">
+                                    <input type="text" class="form-input" id="chatInput" placeholder="Ask me anything about code...">
                                     <button class="btn btn-primary" onclick="sendChatMessage()" id="chatSendBtn">Send</button>
                                 </div>
                             </div>
@@ -1164,17 +1168,21 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('open');
+            const menuToggle = document.getElementById('menuToggle');
+            const isOpen = sidebar.classList.toggle('open');
             overlay.classList.toggle('active');
-            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+            document.body.classList.toggle('sidebar-open', isOpen);
+            if (menuToggle) menuToggle.setAttribute('aria-expanded', isOpen);
         }
 
         function closeSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
+            const menuToggle = document.getElementById('menuToggle');
             sidebar.classList.remove('open');
             overlay.classList.remove('active');
-            document.body.style.overflow = '';
+            document.body.classList.remove('sidebar-open');
+            if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
         }
 
         // ===== Navigation =====
@@ -1355,10 +1363,6 @@
             }
         }
 
-        function handleTerminalKeypress(e) {
-            if (e.key === 'Enter') runTerminalCommand();
-        }
-
         // ===== Python Functions =====
         async function runPython() {
             const code = document.getElementById('pythonCode').value.trim();
@@ -1456,10 +1460,6 @@
             } finally {
                 setLoading('chatSendBtn', false);
             }
-        }
-
-        function handleChatKeypress(e) {
-            if (e.key === 'Enter') sendChatMessage();
         }
 
         function escapeHtml(text) {
@@ -1588,6 +1588,21 @@
                     closeSidebar();
                 }
             });
+
+            // Add keyboard event listeners (using keydown instead of deprecated keypress)
+            const terminalInput = document.getElementById('terminalInput');
+            if (terminalInput) {
+                terminalInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') runTerminalCommand();
+                });
+            }
+
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') sendChatMessage();
+                });
+            }
         });
     </script>
 </body>
