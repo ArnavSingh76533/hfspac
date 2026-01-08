@@ -519,31 +519,31 @@
         </div>
         
         <nav class="sidebar-nav">
-            <div class="sidebar-item active" onclick="showSection('code-editor')">
+            <div class="sidebar-item active" onclick="showSection('code-editor', event)">
                 <span>💻</span>
                 <span>Code Editor</span>
             </div>
-            <div class="sidebar-item" onclick="showSection('bash-executor')">
+            <div class="sidebar-item" onclick="showSection('bash-executor', event)">
                 <span>🔧</span>
                 <span>Bash Executor</span>
             </div>
-            <div class="sidebar-item" onclick="showSection('python-eval')">
+            <div class="sidebar-item" onclick="showSection('python-eval', event)">
                 <span>🐍</span>
                 <span>Python Eval</span>
             </div>
-            <div class="sidebar-item" onclick="showSection('javascript-runner')">
+            <div class="sidebar-item" onclick="showSection('javascript-runner', event)">
                 <span>⚡</span>
                 <span>JavaScript Runner</span>
             </div>
-            <div class="sidebar-item" onclick="showSection('ai-agent')">
+            <div class="sidebar-item" onclick="showSection('ai-agent', event)">
                 <span>🤖</span>
                 <span>AI Agent (GPT)</span>
             </div>
-            <div class="sidebar-item" onclick="showSection('file-manager')">
+            <div class="sidebar-item" onclick="showSection('file-manager', event)">
                 <span>📁</span>
                 <span>File Manager</span>
             </div>
-            <div class="sidebar-item" onclick="showSection('api-tester')">
+            <div class="sidebar-item" onclick="showSection('api-tester', event)">
                 <span>🌐</span>
                 <span>API Tester</span>
             </div>
@@ -578,12 +578,12 @@
                 </p>
                 
                 <div class="language-selector">
-                    <button class="lang-btn active" onclick="changeEditorLanguage('python')">Python</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('javascript')">JavaScript</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('html')">HTML</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('css')">CSS</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('json')">JSON</button>
-                    <button class="lang-btn" onclick="changeEditorLanguage('bash')">Bash</button>
+                    <button class="lang-btn active" onclick="changeEditorLanguage('python', event)">Python</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('javascript', event)">JavaScript</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('html', event)">HTML</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('css', event)">CSS</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('json', event)">JSON</button>
+                    <button class="lang-btn" onclick="changeEditorLanguage('bash', event)">Bash</button>
                 </div>
                 
                 <div class="editor-container" id="editor"></div>
@@ -848,7 +848,7 @@
         }
         
         // Section navigation
-        function showSection(sectionId) {
+        function showSection(sectionId, event) {
             // Hide all sections
             document.querySelectorAll('.content-section').forEach(section => {
                 section.classList.remove('active');
@@ -861,7 +861,9 @@
             
             // Show selected section
             document.getElementById(sectionId).classList.add('active');
-            event.target.closest('.sidebar-item').classList.add('active');
+            if (event && event.target) {
+                event.target.closest('.sidebar-item').classList.add('active');
+            }
             
             // Update title
             const titles = {
@@ -882,7 +884,7 @@
         }
         
         // Change editor language
-        function changeEditorLanguage(lang) {
+        function changeEditorLanguage(lang, event) {
             currentLanguage = lang;
             if (editor) {
                 monaco.editor.setModelLanguage(editor.getModel(), lang);
@@ -892,7 +894,9 @@
             document.querySelectorAll('.lang-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
             
             // Set default code
             const defaults = {
